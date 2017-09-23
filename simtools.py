@@ -2,6 +2,10 @@ import pandas as pd
 import numpy as np
 import sys
 from sklearn.preprocessing import scale
+from scipy import stats
+import statsmodels.api as sm
+
+
 
 class Simtools(object):
 
@@ -15,7 +19,7 @@ class Simtools(object):
         self.genotypematrix = matrix
         self.n = matrix.shape[0]
         self.p = matrix.shape[1]
-        self.index = np.arange(0, self.n - 1)
+        self.index = np.arange(0, self.n)
             
 
     def simple_phenotype(self, causal, hera, liability=None):
@@ -29,19 +33,19 @@ class Simtools(object):
 
         self.causal = self.define_causal(causal)
         geffect = scale(np.dot(self.genotypematrix, self.causal))
-        
+
         if liability is None:
-            pheno = hera*geffect + np.sqrt(1-hera)*np.random.normal(0, np.sqrt(1), self.n)
+            pheno = np.sqrt(hera)*geffect + np.sqrt(1-hera)*np.random.normal(0, np.sqrt(1), self.n)
             return pheno
 
-        elif liability is tuple and len(liability)==3:
+        elif isinstance(liability, tuple) and len(liability)==3:
             threshold = liability[0]
             ncases = liability[1]
             ncontrols = liability[2]
 
             cases, controls = self.liability_model(ncases, ncontrols, threshold, hera, geffect)
-            pheno = np.array(np.repeat(1, len(cases)), np.repeat(0, len(controls))).flatten()
-            self.index = np.array(cases, controls).flatten()
+            pheno = np.append(np.repeat(1, len(cases)), np.repeat(0, len(controls)))
+            self.index = np.append(cases, controls)
             return pheno
 
         else:
@@ -80,7 +84,7 @@ class Simtools(object):
         container_controls = []
 
         for item in range(max_iter):
-            pheno = hera*geffect + np.sqrt(1-hera)*np.random.normal(0, np.sqrt(1), self.n)
+            pheno = np.sqrt(hera)*geffect + np.sqrt(1-hera)*np.random.normal(0, np.sqrt(1), self.n)
             if len(container_cases) < num_cases:
                 container_cases.append(np.argwhere(pheno >=threshold))
 
@@ -95,8 +99,36 @@ class Simtools(object):
         container_controls = [item for sublist in container_controls for item in sublist]
 
         # remove overhanging samples
-        container_cases = container_cases[0:(num_cases -1)]
-        container_controls = container_controls[0:(num_controls -1)]
+        container_cases = container_cases[0:(num_cases)]
+        container_controls = container_controls[0:(num_controls)]
 
         return container_cases, container_controls
+
+    def gwas(self, phenotypes, genotypematrix=None):
+        """Computes summary statistics
+
+        :genotypematrix: TODO
+        :returns: TODO
+
+        """
+
+        if genotypematrix is None:
+            genotypematrix = self.genotypematrix[self.index]
+            output = pd.DataFrame(columns=['beta', 'std_err', 'p_value'], index=self.index)
+        else:
+            output = pd.DataFrame(columns=['beta', 'std_err', 'p_value'], index=genotypematrix.index)
+
+        if len(np.unique(phenotypes))==2:
+            # logistic regression
+            print(output.shape)
+            for p in range(0, genotypematrix.shape[1]):
+                model = sm.GLM(phenotypes, genotypematrix[:,p], family=sm.families.Binomial()).fit()
+                output.iloc[p] = model.params[0], model.bse[0], model.pvalues[0]
+        else:
+            # normal regression
+            for p in range(0, genotypematrix.shape[1]):
+                slope, intercept, r_value, p_value, std_err = stats.linregress(phenotypes,genotypematrix[:,p])
+                output.iloc[p] = slope, std_err, p_value
+
+        return output
 
