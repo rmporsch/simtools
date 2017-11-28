@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import sys
 from sklearn.preprocessing import scale
-from scipy import stats
+import pymp
 import statsmodels.api as sm
 
 
@@ -12,22 +12,24 @@ class Simtools(object):
     """Containing multiple functions to simulate phenotypes"""
 
     def __init__(self, matrix):
-        """TODO: to be defined1.
+        """Initiate a simtools object
         
-        :matrix TODO
+        :matrix pandas DataFrame object with the genotypes
         """
         self.genotypematrix = matrix
         self.n = matrix.shape[0]
         self.p = matrix.shape[1]
         self.index = np.arange(0, self.n)
+        self.geno_index = np.arange(0, self.p)
             
 
     def simple_phenotype(self, causal, hera, liability=None):
         """simulates a phenotypes (continues or binary)
 
-        :hera: TODO
-        :liability: TODO
-        :returns: TODO
+        :causal Number of causal SNPs
+        :hera: Heritability
+        :liability: Liability Threshold
+        :returns: Vector of the phenotype
 
         """
 
@@ -55,8 +57,8 @@ class Simtools(object):
     def define_causal(self, causal):
         """Simulates a causal vector
 
-        :causal: TODO
-        :returns: TODO
+        :causal: Number of causal SNPs
+        :returns: Vector of Positions of causal SNPs
 
         """
 
@@ -74,10 +76,10 @@ class Simtools(object):
     def liability_model(self, num_cases, num_controls, threshold, hera, geffect, max_iter=10000):
         """simulates cases and controls
 
-        :num_cases: TODO
-        :num_controls: TODO
-        :threshold: TODO
-        :returns: TODO
+        :num_cases: number of cases
+        :num_controls: number of controls
+        :threshold: liability threshold
+        :returns: subject IDs of cases and controls
 
         """
         container_cases = []
@@ -104,31 +106,36 @@ class Simtools(object):
 
         return container_cases, container_controls
 
-    def gwas(self, phenotypes, genotypematrix=None):
-        """Computes summary statistics
+    def gwas(self, phenotypes, genotypematrix=None, num_threads=1):
+        """Computes summary statistics 
 
-        :genotypematrix: TODO
-        :returns: TODO
+        :phenotypes: Vector of phenotypes
+        :genotypematrix: Matrix of genotypes
+        :returns: pandas DataFrame with the summary statistics
 
         """
 
         if genotypematrix is None:
-            genotypematrix = self.genotypematrix[self.index]
-            output = pd.DataFrame(columns=['beta', 'std_err', 'p_value'], index=self.index)
+            genotypematrix = self.genotypematrix[self.index,:]
+            output = pymp.shared.array((self.p, 3))
+            print('running GWAS on %i individuals and %i SNPs' % genotypematrix.shape)
         else:
-            output = pd.DataFrame(columns=['beta', 'std_err', 'p_value'], index=genotypematrix.index)
+            output = pymp.shared.array((genotypematrix.shape[1], 3))
+            print('running GWAS on %i individuals and %i SNPs' % genotypematrix.shape)
 
         if len(np.unique(phenotypes))==2:
             # logistic regression
-            print(output.shape)
-            for p in range(0, genotypematrix.shape[1]):
-                model = sm.GLM(phenotypes, genotypematrix[:,p], family=sm.families.Binomial()).fit()
-                output.iloc[p] = model.params[0], model.bse[0], model.pvalues[0]
+            with pymp.Parallel(num_threads) as th:
+                for p in th.range(genotypematrix.shape[1]):
+                    model = sm.GLM(phenotypes, sm.add_constant(genotypematrix[:,p]), family=sm.families.Binomial()).fit()
+                    output[p,:] = model.params[1], model.bse[1], model.pvalues[1]
         else:
             # normal regression
-            for p in range(0, genotypematrix.shape[1]):
-                slope, intercept, r_value, p_value, std_err = stats.linregress(phenotypes,genotypematrix[:,p])
-                output.iloc[p] = slope, std_err, p_value
+            with pymp.Parallel(num_threads) as th:
+                for p in th.range(genotypematrix.shape[1]):
+                    model = sm.GLM(phenotypes, sm.add_constant(genotypematrix[:,p]), family=sm.families.Binomial()).fit()
+                    output[p,:] = model.params[1], model.bse[1], model.pvalues[1]
+
+        output = pd.DataFrame(output, columns=['beta', 'std_err', 'p_value'], index=self.geno_index)
 
         return output
-

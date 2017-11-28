@@ -1,15 +1,17 @@
 import unittest
-import genotypes as gp
+from simtools import genotypes as gp
 import numpy as np
 import pandas as pd
+import os
 
+DATA = os.path.join(os.path.dirname(__file__), 'data')
 
 class TestGenotypes(unittest.TestCase):
 
     def setUp(self):
         self.n = 1000
         self.p = 100
-        self.testread = gp.ReadVCF('example.vcf.gz')
+        self.testread = gp.ReadVCF('data/example.vcf.gz')
 
     def test_simple_genotype(self):
         temp = gp.simple_genotype_matrix(self.n, self.p)

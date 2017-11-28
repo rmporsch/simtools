@@ -1,0 +1,4 @@
+include README.rst
+include LICENSE
+include simtools/tests/example.vcf.gz
+include simtools/tests/example.vcf.gz.tbi

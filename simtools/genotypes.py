@@ -4,6 +4,8 @@
 import numpy as np
 import pandas as pd
 import re
+import vcf
+import os
 
 def simple_genotype_matrix(n, p, min_maf=0.05, max_maf=0.5):
     """Generates a simple matrix containing either 0 or 1 of size nxp
@@ -21,8 +23,6 @@ def simple_genotype_matrix(n, p, min_maf=0.05, max_maf=0.5):
 
     return genotypes
 
-import vcf
-import os
 
 class ReadVCF(object):
 
@@ -74,6 +74,7 @@ class ReadVCF(object):
 
         self._variants = self._variants.query('AF >= @maf and AF <= (1- @maf)')
         self._sampled = self._variants.sample(n=p)
+        
 
         if write_disk:
             self._sampled.to_csv('.temp/subsample_variant.list')
