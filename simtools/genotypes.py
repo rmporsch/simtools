@@ -29,9 +29,9 @@ class ReadVCF(object):
     """Reads a given vcf file"""
 
     def __init__(self, vcffile):
-        """TODO: to be defined1.
+        """Initlize class with a given vcffile
 
-        :vcffile: TODO
+        :vcffile: path to the vcf file
 
         """
         self._vcffile = vcffile
@@ -40,8 +40,7 @@ class ReadVCF(object):
     def read_vcf(self, index_file=False):
         """Reads the vcf file and gets and index
 
-        :index_file: TODO
-        :returns: TODO
+        :index_file: location of the index file
 
         """
         vcf_reader = vcf.Reader(filename=self._vcffile)
@@ -63,9 +62,8 @@ class ReadVCF(object):
     def __sample_variants(self, maf, p, write_disk=False):
         """Sample a random set of variants
 
-        :maf: TODO
-        :p: TODO
-        :returns: TODO
+        :maf: minor allele frequency cutoff
+        :p: number of variants to sample
 
         """
         self._variants = pd.read_table('./.temp/variant.list',
@@ -82,8 +80,7 @@ class ReadVCF(object):
     def __sample_subjects(self, n):
         """Sample a random set of subjects
 
-        :n: TODO
-        :returns: TODO
+        :n: number of subjects to sample
 
         """
         self._randomset = np.random.choice(self._samples, n, replace=True)
@@ -91,11 +88,11 @@ class ReadVCF(object):
     def sample(self, maf, n, p, write_disk=False):
         """Random sample a set of variants and subjects
 
-        :maf: TODO
-        :n: TODO
-        :p: TODO
-        :write_disk: TODO
-        :returns: TODO
+        :maf: minor allele frequency cutoff
+        :n: number of subjects to sample
+        :p: number of variants to sample
+        :write_disk: bool, write to disk a list of variants
+        :returns: a numpy matrix of size n*p
 
         """
         self.__sample_variants(maf, p, write_disk)
@@ -121,8 +118,8 @@ class ReadVCF(object):
         """counts the genotypes at a given position
         !!! missing is counted as 0 !!!
 
-        :rr: TODO
-        :returns: TODO
+        :rr: genotype string from vcf object
+        :returns: 0, 1 or 2
 
         """
         genotype = np.array(list(map(int, re.findall(r'(\d+)', rr))))
