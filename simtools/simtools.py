@@ -146,11 +146,10 @@ class Simtools(object):
         :returns: TODO
 
         """
-        if np.all(!lamb.shape==B.shape):
+        if np.all(lamb.shape!=B.shape):
             raise NameError("""dimensions of transition matrix and
                     genetic effect is not the same""")
-
-	Beta = self.__multiple_effect_vectors(t, num_causal)
+        Beta = self.__multiple_effect_vectors(t, num_causal)
         G = self.genotypematrix.dot(Beta)
         G = (G - G.means(axis=1)) / G.std(axis=1)
 
@@ -189,11 +188,11 @@ class Simtools(object):
         return invert.dot(temp)
 
     def __multiple_effect_vectors(self, t, num_causal_snps):
-	Beta = np.zeros([self.p, t])
+        Beta = np.zeros([self.p, t])
         causal_index = [np.random.randint(low=0, high=self.p, size=k)
                 for k in num_causal_snp]
-	# simualte effect sizes for each variant
-	for i in range(Beta.shape[1]):
-	    Beta[causal_index[i],i] = 1
+        # simualte effect sizes for each variant
+        for i in range(Beta.shape[1]):
+            Beta[causal_index[i],i] = 1
 
-	return Beta
+        return Beta

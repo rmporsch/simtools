@@ -6,6 +6,7 @@ import pandas as pd
 import re
 import vcf
 import os
+from pandas_plink import read_plink
 
 def simple_genotype_matrix(n, p, min_maf=0.05, max_maf=0.5):
     """Generates a simple matrix containing either 0 or 1 of size nxp
@@ -85,7 +86,7 @@ class ReadVCF(object):
         """
         self._randomset = np.random.choice(self._samples, n, replace=True)
 
-    def sample(self, maf, n, p, write_disk=False):
+    def sample(self, n, p, maf=0.05, write_disk=False):
         """Random sample a set of variants and subjects
 
         :maf: minor allele frequency cutoff
@@ -126,3 +127,44 @@ class ReadVCF(object):
         if flip:
             genotypes = abs(genotype - 1)
         return sum(genotype)
+
+
+
+class ReadPlink(object):
+
+    """Reads plink files"""
+
+    def __init__(self, plinkstem):
+        """initialises plink files
+
+        :plinkstem: plink stem file path
+
+        """
+        self._plinkstem = plinkstem
+        (self.bim, self.fam, self.G) = read_plink(plinkstem, verbose=False)
+
+
+    def sample(self, n, p, write_disk=False):
+        """Samples from a plink file with random SNPs and subjects
+        Currently pandas_plink does not support fancy indexing, hence
+        sample will load the genotypes of all subjects before randomly sample
+        subjects IDs.
+
+        :maf: minor allele frequency cutoff
+        :n: number of subjects to sample
+        :p: number of variants to sample
+        :write_disk: bool, write to disk a list of variants
+        :returns: a numpy matrix of size n*p
+
+        """
+        self.__sample_subjects = np.random.choice(self.fam.i.values, n, replace=True)
+        self.__sample_variants = np.random.choice(self.bim.i.values, p)
+
+        if write_disk:
+            self.bim.iloc[self.__sample_variants].to_csv('sampled_variants.csv')
+
+        genotypematrix =  self.G[self.__sample_variants, :].compute()
+        genotypematrix = genotypematrix[:, self.__sample_subjects]
+        np.nan_to_num(genotypematrix, copy=False)
+
+        return genotypematrix.T
