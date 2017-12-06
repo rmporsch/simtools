@@ -1,13 +1,14 @@
 import pandas as pd
 import numpy as np
+import scipy
 from matplotlib import pyplot as plt
 
 
-def ggplot(self, dat, grouping='pheno', pvalue='pvalue'):
+def qqplot(dat, grouping='pheno', pvalue='pvalue'):
     """Plots QQ-Plot of GWAS summary statistics
 
     :dat: pandas data input or numpy array of p-values
-    :returns: ggplot
+    :returns: qqplot
 
     """
     if isinstance(dat, np.ndarray):
@@ -66,3 +67,22 @@ def gwas(phenotypes, genotypematrix, num_threads=1):
 
     return output
 
+
+def inflation_factor(s, stats_type='pval', rounding=3):
+    """Computes the inflation factor lambda for a given set of p-values
+
+    :s: array of z-statistics, p-values or chisquare statistics
+    :stats_type: type of statistic (values can be: pval, chisq, or z
+    :rounding: number of decimal places lambda will be given
+    :returns: genomic inflation factor lambda
+
+    """
+    if stats_type=='pval':
+        z = scipy.stats.norm.ppf(s/2)
+    if stats_type=='chisq':
+        z = np.sqrt(s)
+    if stats_type=='z':
+        z = s
+
+    lamb = np.round(np.median(z**2)/0.454, rounding)
+    return lamb
