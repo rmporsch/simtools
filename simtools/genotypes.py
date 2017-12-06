@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import pandas as pd
 import re
@@ -30,8 +29,7 @@ class ReadVCF(object):
     """Reads a given vcf file"""
 
     def __init__(self, vcffile):
-        """Initlize class with a given vcffile
-
+        """
         :vcffile: path to the vcf file
 
         """
@@ -135,8 +133,7 @@ class ReadPlink(object):
     """Reads plink files"""
 
     def __init__(self, plinkstem):
-        """initialises plink files
-
+        """
         :plinkstem: plink stem file path
 
         """

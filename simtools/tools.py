@@ -1,3 +1,6 @@
+"""
+Functions to perform various tasks often needed when using simulated data
+"""
 import pandas as pd
 import numpy as np
 import scipy
@@ -86,3 +89,72 @@ def inflation_factor(s, stats_type='pval', rounding=3):
 
     lamb = np.round(np.median(z**2)/0.454, rounding)
     return lamb
+
+
+def causal_models(causal_id, num_pheno):
+    """Generates adjacency matrices for specific causal models
+
+    :causal_id: model number
+    :num_pheno: number of phenotypes
+    :returns: adjacency matrix of size num_pheno*num_pheno
+
+    """
+    lamb = np.zeros((num_pheno, num_pheno))
+    if causal_id == 1:
+        num_edges = num_pheno -1
+        arr = np.arange(num_pheno)
+        np.random.shuffle(arr)
+        i = 0
+        while i <num_edges:
+            lamb[arr[i+1], arr[i]] = 1
+            i += 1
+        return lamb
+    if causal_id == 2:
+        arr = np.arange(num_pheno)
+        np.random.shuffle(arr)
+        root = arr[0]
+        to_edghe = np.delete(arr, 0)
+        for i in to_edghe:
+            lamb[i, root] = 1
+        return lamb
+    if causal_id == 3:
+        num_pairs = 1
+        arr = np.arange(num_pheno)
+        np.random.shuffle(arr)
+        if num_pheno % 2 !=0:
+            arr = np.delete(arr,0)
+        edges = np.split(arr, len(arr)/2) 
+        for i in edges:
+            lamb[i[0], i[1]] = 1
+        return lamb
+    if causal_id == 4:
+        arr = np.arange(num_pheno)
+        np.random.shuffle(arr)
+        arr = np.append(arr, arr[0])
+        num_edges = num_pheno
+        i = 0
+        while i <num_edges:
+            lamb[arr[i+1], arr[i]] = 1
+            i += 1
+        return lamb
+
+def causal_model_adjustment(lamb):
+    """Evaluates an adjacency matrix and adjust it if necessary
+    to ensure that evaluation remains fair.
+
+    For example, if A -> B -> C then this would be the same as A -> C
+
+    :lamb: adjacency matrix
+    :returns: adjusted adjacency matrix
+
+    """
+    # identify if causal re-direction is required
+    rowsum = np.sum(lamb, axis=1)
+    colsum = np.sum(lamb, axis=0)
+    if ((np.any(rowsum > 1) & np.any(colsum >1)) | np.sum(colsum == 0) > 1):
+        return lamb
+    else:
+        start = np.where(rowsum==0)[0]
+        end = np.where(colsum==0)[0]
+        lamb[end, start] = 1.0
+        return lamb 

@@ -8,13 +8,11 @@ import statsmodels.api as sm
 
 
 class Simtools(object):
-
-    """Containing multiple methods to simulate phenotypes"""
+    """Initiates a simtools object to generate various different phenotypes"""
 
     def __init__(self, matrix):
-        """Initiate a simtools object
-
-        :matrix numpy matrix of genotypes
+        """
+        :matrix: numpy matrix of genotypes
         """
         self.genotypematrix = matrix
         self.n = matrix.shape[0]
@@ -27,7 +25,7 @@ class Simtools(object):
         """simulates a phenotypes (continues or binary)
         If a liability threshold is used, the method generates a binary phenotype
 
-        :causal Number of causal SNPs
+        :causal: Number of causal SNPs
         :hera: Heritability
         :liability: Liability Threshold
         :returns: Vector of the phenotype
@@ -114,7 +112,7 @@ class Simtools(object):
 
         return container_cases, container_controls
 
-    def estimateF(self, x, G, lamb, B):
+    def __estimateF(self, x, G, lamb, B):
         """estimator function to estiamte scalar matrices
 
         :x: value to find
@@ -170,7 +168,7 @@ class Simtools(object):
         G = self.genotypematrix.dot(Beta)
         G = (G - G.mean(axis=0)) / G.std(axis=0)
 
-        sol = root(lambda k:self.estimateF(k, G=G, lamb=lamb, B=B),
+        sol = root(lambda k:self.__estimateF(k, G=G, lamb=lamb, B=B),
              np.array([0.3, 0.3,0.3]), method='krylov')
         phenotypes = self.__compute_multi_pheno(sol.x, G, lamb, B)
         return phenotypes
