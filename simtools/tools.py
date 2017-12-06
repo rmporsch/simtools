@@ -17,7 +17,7 @@ def ggplot(self, dat, grouping='pheno', pvalue='pvalue'):
         plt.plot(null, dat, '.')
         plt.plot(null, null)
 
-    else if isinstance(dat, pd.DataFrame):
+    elif isinstance(dat, pd.DataFrame):
         for name, group in dat.groupby(grouping):
             temp = group[['pvalue']]
             n = temp.shape[0]
@@ -32,3 +32,37 @@ def ggplot(self, dat, grouping='pheno', pvalue='pvalue'):
     plt.ylabel('Observed')
     plt.title('QQ plot')
     plt.show()
+
+def gwas(phenotypes, genotypematrix, num_threads=1):
+    """Computes summary statistics 
+
+    :phenotypes: Vector of phenotypes
+    :genotypematrix: numpy matrix of genotypes
+    :num_threads: number of threads to use
+    :returns: pandas DataFrame with the summary statistics
+
+    """
+
+    output = pymp.shared.array((genotypematrix.shape[1], 3))
+    print('running GWAS on %i individuals and %i SNPs' % genotypematrix.shape)
+
+    if len(np.unique(phenotypes))==2:
+        # logistic regression
+        with pymp.Parallel(num_threads) as th:
+            for p in th.range(genotypematrix.shape[1]):
+                model = sm.GLM(phenotypes, sm.add_constant(genotypematrix[:,p]),
+                        family=sm.families.Binomial()).fit()
+                output[p,:] = model.params[1], model.bse[1], model.pvalues[1]
+    else:
+        # normal regression
+        with pymp.Parallel(num_threads) as th:
+            for p in th.range(genotypematrix.shape[1]):
+                model = sm.GLM(phenotypes, sm.add_constant(genotypematrix[:,p]),
+                        family=sm.families.Binomial()).fit()
+                output[p,:] = model.params[1], model.bse[1], model.pvalues[1]
+
+    output = pd.DataFrame(output, columns=['beta', 'std_err', 'p_value'],
+            index=range(genotypematrix.shape[1]))
+
+    return output
+

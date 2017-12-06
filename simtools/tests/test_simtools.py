@@ -1,6 +1,7 @@
 import unittest
 from simtools import genotypes as gp
 from simtools import simtools as si
+from simtools import tools
 import numpy as np
 import pandas as pd
 import pymp
@@ -32,12 +33,23 @@ class TestSimtools(unittest.TestCase):
 #        # single thread
 #        pheno = np.random.rand(100)
 #        self.genotypematrix = np.random.rand(100, 1000)
-#        output = si.gwas(pheno, self.genotypematrix)
+#        output = tools.gwas(pheno, self.genotypematrix)
 #        # multi thread
-#        #output = si.gwas(pheno, self.genotypematrix, num_threads=4)
+#        #output = tools.gwas(pheno, self.genotypematrix, num_threads=4)
 #        self.assertEqual(output.shape[0], self.p)
 #        self.assertEqual(output.shape[1], 3)
-
+    
+    def test_multi_pheno(self):
+        B = np.zeros((3,3))
+        lamb = np.zeros((3,3))
+        num_causal = [3,3,3]
+        pheno = self.sim.multi_phenotype(lamb, B, num_causal)
+        self.assertEqual(pheno.shape[1], self.n)
+        self.assertEqual(pheno.shape[0], 3)
+        var = np.var(pheno, axis=1)
+        self.assertAlmostEqual(var[0], 1, delta=0.2)
+        self.assertAlmostEqual(var[1], 1, delta=0.2)
+        self.assertAlmostEqual(var[2], 1, delta=0.2)
 
 if __name__ == '__main__':
     unittest.main()
