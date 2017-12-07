@@ -130,7 +130,7 @@ class ReadVCF(object):
 
 class ReadPlink(object):
 
-    """Reads plink files"""
+    """Reads plink files and allows random sampling"""
 
     def __init__(self, plinkstem):
         """
@@ -147,7 +147,6 @@ class ReadPlink(object):
         sample will load the genotypes of all subjects before randomly sample
         subjects IDs.
 
-        :maf: minor allele frequency cutoff
         :n: number of subjects to sample
         :p: number of variants to sample
         :write_disk: bool, write to disk a list of variants

@@ -3,7 +3,6 @@ import numpy as np
 import sys
 from sklearn.preprocessing import scale
 from scipy.optimize import root
-import pymp
 import statsmodels.api as sm
 
 

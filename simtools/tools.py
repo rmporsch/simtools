@@ -3,8 +3,10 @@ Functions to perform various tasks often needed when using simulated data
 """
 import pandas as pd
 import numpy as np
+import pymp
 import scipy
 from matplotlib import pyplot as plt
+import statsmodels.api as sm
 
 
 def qqplot(dat, grouping='pheno', pvalue='pvalue'):
@@ -37,18 +39,20 @@ def qqplot(dat, grouping='pheno', pvalue='pvalue'):
     plt.title('QQ plot')
     plt.show()
 
-def gwas(phenotypes, genotypematrix, num_threads=1):
+def gwas(phenotypes, genotypematrix, num_threads=1, verbose=False):
     """Computes summary statistics 
 
     :phenotypes: Vector of phenotypes
     :genotypematrix: numpy matrix of genotypes
     :num_threads: number of threads to use
+    :verbose: print status of the GWAS
     :returns: pandas DataFrame with the summary statistics
 
     """
 
     output = pymp.shared.array((genotypematrix.shape[1], 3))
-    print('running GWAS on %i individuals and %i SNPs' % genotypematrix.shape)
+    if verbose:
+        print('running GWAS on %i individuals and %i SNPs' % genotypematrix.shape)
 
     if len(np.unique(phenotypes))==2:
         # logistic regression
@@ -62,7 +66,7 @@ def gwas(phenotypes, genotypematrix, num_threads=1):
         with pymp.Parallel(num_threads) as th:
             for p in th.range(genotypematrix.shape[1]):
                 model = sm.GLM(phenotypes, sm.add_constant(genotypematrix[:,p]),
-                        family=sm.families.Binomial()).fit()
+                        family=sm.families.Gaussian()).fit()
                 output[p,:] = model.params[1], model.bse[1], model.pvalues[1]
 
     output = pd.DataFrame(output, columns=['beta', 'std_err', 'p_value'],
