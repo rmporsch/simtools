@@ -7,12 +7,13 @@ from simtools import genotypes as gp
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
 
-class TestGenotypes(unittest.TestCase):
+class TestPlink(unittest.TestCase):
 
     def setUp(self):
         self.n = 1000
         self.p = 100
-        self.testread = gp.ReadPlink(example_file_prefix())
+        self.ff = "/home/robert/Documents/projects/prs/data/genotypes/subset_10k"
+        self.testread = gp.ReadPlink(self.ff)
 
     def test_sampling(self):
         temp = self.testread.sample(self.n, self.p)

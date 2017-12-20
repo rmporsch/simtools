@@ -6,7 +6,7 @@ import os
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
 
-class TestGenotypes(unittest.TestCase):
+class TestVCF(unittest.TestCase):
 
     def setUp(self):
         self.n = 1000

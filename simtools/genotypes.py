@@ -5,7 +5,7 @@ import pandas as pd
 import re
 import vcf
 import os
-from pandas_plink import read_plink
+from pyplink import PyPlink
 
 def simple_genotype_matrix(n, p, min_maf=0.05, max_maf=0.5):
     """Generates a simple matrix containing either 0 or 1 of size nxp
@@ -138,7 +138,15 @@ class ReadPlink(object):
 
         """
         self._plinkstem = plinkstem
-        (self.bim, self.fam, self.G) = read_plink(plinkstem, verbose=False)
+        self._bim_path = os.path.basename(self._plinkstem)+'.bim'
+        self._bed_path = os.path.basename(self._plinkstem)+'.bed'
+        self._fam_path = os.path.basename(self._plinkstem)+'.fam'
+
+        self.plinkfile = PyPlink(self._plinkstem)
+        self.fam = self.plinkfile.get_fam()
+        self.bim = self.plinkfile.get_bim()
+        self.N = self.fam.shape[0]
+        self.P = self.bim.shape[0]
 
 
     def sample(self, n, p, write_disk=False):
@@ -153,14 +161,45 @@ class ReadPlink(object):
         :returns: a numpy matrix of size n*p
 
         """
-        self.__sample_subjects = np.random.choice(self.fam.i.values, n, replace=True)
-        self.__sample_variants = np.random.choice(self.bim.i.values, p)
+        self.__sample_subjects = np.random.choice(self.fam.index.values, n, replace=True)
+        self.__sample_variants = np.random.choice(self.bim.index.values, p)
 
         if write_disk:
             self.bim.iloc[self.__sample_variants].to_csv('sampled_variants.csv')
+            self.bim.iloc[self.__sample_subjects].to_csv('sampled_subjects.csv')
 
-        genotypematrix =  self.G[self.__sample_variants, :].compute()
-        genotypematrix = genotypematrix[:, self.__sample_subjects]
-        np.nan_to_num(genotypematrix, copy=False)
+        genotypematrix =  self.read_bed(self.__sample_variants,
+                self.__sample_subjects)
 
-        return genotypematrix.T
+        return genotypematrix
+
+    def read_bed(self, marker=None, subjects=None):
+        """read bed file
+
+        :marker: TODO
+        :subjects: TODO
+        :returns: TODO
+
+        """
+        if marker is None:
+            P_size = self.P
+            marker = self.bim.index.values
+        else:
+            P_size = len(marker)
+
+        if subjects is None:
+            N_size = self.N
+            subjects = self.index.values
+        else:
+            N_size = len(subjects)
+
+        genotypematrix = np.zeros((N_size, P_size))
+
+        j = 0
+        for m, g in self.plinkfile.iter_geno_marker(marker):
+            genotypematrix[:,j] = g[subjects]
+            j += 1
+
+        genotypematrix[genotypematrix < 0] = 0
+
+        return genotypematrix
