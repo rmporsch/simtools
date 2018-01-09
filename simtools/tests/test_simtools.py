@@ -13,10 +13,10 @@ class TestSimtools(unittest.TestCase):
     def setUp(self):
         self.n = 100
         self.p = 1000
+        self.ff = "/home/robert/Documents/projects/prs/data/genotypes/subset_10k"
         self.n_cases = 50
         self.n_controls = 50
-        self.genotypematrix = gp.simple_genotype_matrix(self.n, self.p, 0.05, 0.5)
-        self.sim = si.Simtools(self.genotypematrix)
+        self.sim = si.Simtools(self.ff)
 
     def test_simple_sim(self):
         pheno = self.sim.simple_phenotype(0.2, 0.4)
@@ -43,7 +43,7 @@ class TestSimtools(unittest.TestCase):
         B = np.zeros((3,3))
         lamb = np.zeros((3,3))
         num_causal = [3,3,3]
-        pheno = self.sim.multi_phenotype(lamb, B, num_causal)
+        pheno = self.sim.multi_phenotype(lamb, B, num_causal, self.n)
         self.assertEqual(pheno.shape[1], self.n)
         self.assertEqual(pheno.shape[0], 3)
         var = np.var(pheno, axis=1)

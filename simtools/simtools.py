@@ -4,39 +4,123 @@ import sys
 from sklearn.preprocessing import scale
 from scipy.optimize import root
 import statsmodels.api as sm
+from simtools.genotypes import ReadPlink
 
 
 class Simtools(object):
     """Initiates a simtools object to generate various different phenotypes"""
 
-    def __init__(self, matrix):
+    def __init__(self, plink_stem, subjects=None, p=None):
         """
-        :matrix: numpy matrix of genotypes
+        :plink_stem: plink stem file path
+        :subjects: iid of subjects to use
+        :p: number of variants to use 
         """
-        self.genotypematrix = matrix
-        self.n = matrix.shape[0]
-        self.p = matrix.shape[1]
-        self.index = np.arange(0, self.n)
-        self.geno_index = np.arange(0, self.p)
+        self._plink_stem = plink_stem
+        self._plink = ReadPlink(self._plink_stem)
+
+        if subjects is None:
+            self.subjects = self._plink.fam.iid.values
+            self._id_subjects = self._plink.fam.index.values
+            self.n = self._plink.fam.shape[0]
+        else:
+            self.n = len(n)
+            self.subjects = subjects
+            self._id_subjects = self._plink.fam.iid.get_loc(self.subjects)
+
+        if p is None:
+            self.p = self._plink.P
+        else:
+            self.p = p
+
+        self.genotypematrix = None
+        self.chunk_size = 100
+        self.causal_snps = None
+
+    def __causal_SNPs(self, causal, weights=None):
+        """Define causal SNPs
+
+        :causal: TODO
+        :weights: TODO
+        :returns: TODO
+
+        """
+        causal_snps = []
+        if isinstance(causal, int):
+            causal_snps = np.random.choice(range(self.p), causal)
+            causal_snps = self._plink.bim.index.values[causal_snps]
+        if isinstance(causal, str):
+            causal_snps = causal
+        if isinstance(causal, list):
+            causal_snps = self._plink.bim.index.values[np.array(causal)]
+        if isinstance(causal, float):
+            n_causal = int(np.floor(self.p*causal))
+            causal_snps = np.random.choice(range(self.p), n_causal)
+            causal_snps = self._plink.bim.index.values[causal_snps]
+
+        if weights==None:
+            weights = np.ones(len(causal_snps))
+        else:
+            if len(weights) != len(self.causal_snps):
+                ValueError('Number of weights and number of SNPs do not agree')
+
+        return causal_snps, weights
+
+    def __chunks(self, l, n):
+        """Yield successive n-sized chunks from l."""
+        for i in range(0, len(l), n):
+            yield l[i:i + n]
+
+    def __compute_geffect(self, causal_snps, weights, subjects):
+        """TODO: Docstring for _compute_geffect.
+
+        :chunk_size: TODO
+        :returns: TODO
+
+        """
+        snp_chunks = self.__chunks(causal_snps, self.chunk_size)
+        effect_chunks = self.__chunks(weights, self.chunk_size)
+        t = weights.shape
+        n = len(subjects)
+
+        # check number of phenotypes
+        if len(t)>1:
+            t = t[1]
+            geffect = np.zeros((n,t))
+        else:
+            t = 1
+            geffect = np.zeros((n,))
 
 
-    def simple_phenotype(self, causal, hera, liability=None):
+        for snps,effect in zip(snp_chunks, effect_chunks):
+            temp_matrix = self._plink.read_bed(marker=snps,
+                    subjects=subjects)
+            geffect += np.dot(temp_matrix, effect)
+
+        return scale(geffect)
+
+    def simple_phenotype(self, causal, hera, liability=None, n=None):
         """simulates a phenotypes (continues or binary)
         If a liability threshold is used, the method generates a binary phenotype
 
         :causal: Number of causal SNPs
         :hera: Heritability
         :liability: Liability Threshold
+        :n: number of subjects to sample
         :returns: Vector of the phenotype
 
         """
+        subjects = self._id_subjects
+        if n is not None:
+            subjects = np.random.choice(self._id_subjects, n)
 
-        self.causal = self.__define_causal(causal)
-        geffect = scale(np.dot(self.genotypematrix, self.causal))
+
+        causal_snps, weights = self.__causal_SNPs(causal)
+        geffect = self.__compute_geffect(causal_snps, weights, subjects)
 
         if liability is None:
             pheno = np.sqrt(hera)*geffect + np.sqrt(1-hera)*np.random.normal(0,
-                    np.sqrt(1), self.n)
+                    np.sqrt(1), len(subjects))
             return pheno
 
         elif isinstance(liability, tuple) and len(liability)==3:
@@ -52,28 +136,6 @@ class Simtools(object):
 
         else:
             sys.exit('values are missing')
-
-
-    def __define_causal(self, causal):
-        """Simulates a causal vector
-
-        :causal: Number of causal SNPs
-        :returns: Vector of Positions of causal SNPs
-
-        """
-
-        if type(causal) is float:
-            causal = np.random.binomial(1, causal, self.p)
-            return causal
-
-        if type(causal) is np.ndarray:
-            if ((any(x not in set(causal) for x in [0,1])) or
-                    (len(set(causal))>2) or
-                    len(causal)!=self.p):
-                sys.exit('invalid causal vector')
-            else:
-                return causal
-
 
     def __liability_model(self, num_cases, num_controls,
             threshold, hera, geffect, max_iter=10000):
@@ -149,12 +211,13 @@ class Simtools(object):
 
         return Beta
 
-    def multi_phenotype(self, lamb, B, num_causal):
+    def multi_phenotype(self, lamb, B, num_causal, n=None):
         """Generates multiple inter-related phenotypes
 
         :lamb: adjacency matrix
         :B: genetic effect matrix
         :num_causal: number of causal variants (randomly choosen)
+        :n: number of samples to randomly chose
         :returns: matrix of size n*t
 
         """
@@ -162,10 +225,20 @@ class Simtools(object):
             raise NameError("""dimensions of transition matrix and
                     genetic effect is not the same""")
 
+        subjects = self._id_subjects
+
+        if n is not None:
+            subjects = np.random.choice(self._id_subjects, n)
+
         t = lamb.shape[0]
+
         Beta = self.__multiple_effect_vectors(t, num_causal)
-        G = self.genotypematrix.dot(Beta)
-        G = (G - G.mean(axis=0)) / G.std(axis=0)
+        overall_snp_effect = np.sum(Beta, 1)
+        causal_snps = np.where(overall_snp_effect > 0)
+        Beta = Beta[causal_snps]
+        causal_snps = self._plink.bim.index.values[causal_snps[0]]
+
+        G = self.__compute_geffect(causal_snps, Beta, subjects)
 
         sol = root(lambda k:self.__estimateF(k, G=G, lamb=lamb, B=B),
              np.array([0.3, 0.3,0.3]), method='krylov')
