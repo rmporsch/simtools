@@ -1,9 +1,7 @@
 import pandas as pd
 import numpy as np
 import sys
-from sklearn.preprocessing import scale
 from scipy.optimize import root
-import statsmodels.api as sm
 from simtools.genotypes import ReadPlink
 
 
@@ -71,6 +69,15 @@ class Simtools(object):
         for i in range(0, len(l), n):
             yield l[i:i + n]
 
+    def scale(self, x ):
+        """TODO: Docstring for scale.
+
+        :x: numpy matrix
+        :returns: scaled numpy matrix
+
+        """
+        return (x - np.mean(x, asix=0)) / np.std(x, axis=0)
+
     def __compute_geffect(self, causal_snps, weights, subjects):
         """TODO: Docstring for _compute_geffect.
 
@@ -91,13 +98,12 @@ class Simtools(object):
             t = 1
             geffect = np.zeros((n,))
 
-
         for snps,effect in zip(snp_chunks, effect_chunks):
             temp_matrix = self._plink.read_bed(marker=snps,
                     subjects=subjects)
             geffect += np.dot(temp_matrix, effect)
 
-        return scale(geffect)
+        return self.scale(geffect)
 
     def simple_phenotype(self, causal, hera, liability=None, n=None):
         """simulates a phenotypes (continues or binary)
@@ -113,7 +119,7 @@ class Simtools(object):
         subjects = self._id_subjects
         if n is not None:
             subjects = np.random.choice(self._id_subjects, n)
-
+            self.last_random_subjects = self.subjects[subjects]
 
         causal_snps, weights = self.__causal_SNPs(causal)
         geffect = self.__compute_geffect(causal_snps, weights, subjects)
@@ -131,7 +137,8 @@ class Simtools(object):
             cases, controls = self.__liability_model(ncases, ncontrols,
                     threshold, hera, geffect)
             pheno = np.append(np.repeat(1, len(cases)), np.repeat(0, len(controls)))
-            self.index = np.append(cases, controls)
+            self.liability_cases_controls = np.append(cases, controls)
+            self.last_random_subjects = self.subjects[self.liability_cases_controls]
             return pheno
 
         else:
@@ -229,6 +236,7 @@ class Simtools(object):
 
         if n is not None:
             subjects = np.random.choice(self._id_subjects, n)
+            self.last_random_subjects = self.subjects[subjects]
 
         t = lamb.shape[0]
 

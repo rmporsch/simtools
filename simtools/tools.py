@@ -2,11 +2,16 @@
 Functions to perform various tasks often needed when using simulated data
 """
 import pandas as pd
+import re
 import numpy as np
 import pymp
 import scipy
+import os
+import glob
 from matplotlib import pyplot as plt
 import statsmodels.api as sm
+from subprocess import Popen
+from simtools.genotypes import ReadPlink
 
 
 def qqplot(dat, grouping='pheno', pvalue='pvalue'):
@@ -162,3 +167,83 @@ def causal_model_adjustment(lamb):
         end = np.where(colsum==0)[0]
         lamb[end, start] = 1.0
         return lamb 
+
+class Plink(object):
+
+    """Docstring for Plink. """
+
+    def __init__(self, plink_stem, plink_path='auto'):
+        """
+
+        :plink_stem: plink stem file
+        :plink_path: plink location
+
+        """
+        self._plink_stem = plink_stem
+
+        if plink_path=='auto':
+            self._bin_plink = '/usr/bin/plink'
+        else:
+            self._bin_plink=plink_path
+
+        self._plink = ReadPlink(self._plink_stem)
+
+    def gwas_plink(self, phenotype, subjects=None):
+        """Calls plink to compute the summary statistics
+
+        :phenotype: phenotype
+        :returns: DataFrame with the results
+
+        """
+        model_paramters = 'hide-covar'
+
+        # write input files for plink
+        pheno = pd.DataFrame()
+
+        if  phenotype.ndim > 1:
+            pheno = pd.DataFrame(phenotypes,
+                    columns=['p'+str(k+1) for k in range(phenotype.shape[1])])
+        else:
+            pheno = pd.DataFrame(phenotype, columns=['pheno'])
+        if subjects is None:
+            subjects = self._plink.fam.iid.values
+
+        fam = pd.DataFrame({'fid':subjects, 'iid':subjects})
+        pheno = pd.concat([fam, pheno], axis=1)
+        pheno.to_csv('/tmp/temp_pheno', index=False, sep=' ')
+
+        if os.path.isfile('/tmp/plink_temp.log'):
+            for filename in glob.glob('/tmp/plink_temp*'):
+                os.remove(filename)
+
+        output_location = '/tmp/plink_temp'
+        with open(os.devnull, 'w') as fp:
+            plink_run = Popen([self._bin_plink,'--bfile', self._plink_stem,
+                    "--allow-no-sex",
+                    '--pheno', '/tmp/temp_pheno',
+                    '--all-pheno', 
+                    "--linear", model_paramters,
+                    '--out', output_location], stdout=fp)
+            plink_run.wait()
+
+        assoc_files = glob.glob('/tmp/plink_temp.*.assoc.*')
+        results = pd.DataFrame()
+        if len(assoc_files) == 0:
+            ValueError('Plink failed to generate any resutls')
+        elif len(assoc_files) > 1:
+            out_results = []
+            for f in assoc_files:
+                pheno_name = re.sub(r'(/tmp/plink_temp\.|\.assoc\.|\.linear|\.logistic)',
+                        '',f)
+                print(pheno_name)
+                temp = pd.read_table(f, delim_whitespace=True)
+                temp['Phenotype'] = pheno_name
+                out_results.append(temp)
+            results = pd.columns(out_results, axis=0)
+        else:
+            results = pd.read_table(assoc_files[0], delim_whitespace=True)
+
+        if results.shape[0] < 1:
+            ValueError('Plink failed to generate any resutls or result were not imported')
+
+        return results

@@ -19,7 +19,7 @@ class TestSimtools(unittest.TestCase):
         self.sim = si.Simtools(self.ff)
 
     def test_simple_sim(self):
-        pheno = self.sim.simple_phenotype(0.2, 0.4)
+        pheno = self.sim.simple_phenotype(0.05, 0.4, n=self.n)
         self.assertAlmostEqual(np.var(pheno), 1.000, delta=0.2)
         self.assertAlmostEqual(np.mean(pheno), 0.000, delta=0.2)
 
@@ -43,7 +43,7 @@ class TestSimtools(unittest.TestCase):
         B = np.zeros((3,3))
         lamb = np.zeros((3,3))
         num_causal = [3,3,3]
-        pheno = self.sim.multi_phenotype(lamb, B, num_causal, self.n)
+        pheno = self.sim.multi_phenotype(lamb, B, num_causal, n=self.n)
         self.assertEqual(pheno.shape[1], self.n)
         self.assertEqual(pheno.shape[0], 3)
         var = np.var(pheno, axis=1)
