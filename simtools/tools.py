@@ -333,4 +333,4 @@ class Plink(object):
             plink_run.wait()
 
         results = pd.read_table(output_location'.prune.in', delim_whitespace=True)
-        return = results
+        return results
