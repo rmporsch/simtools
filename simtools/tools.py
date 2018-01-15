@@ -247,3 +247,90 @@ class Plink(object):
             ValueError('Plink failed to generate any resutls or result were not imported')
 
         return results
+
+    def prs(self, weights, subjects=None):
+        """Computes the prs score
+
+        :weights: pandas dataframe with rsid, allele, weights
+        :subjects: optional subjects
+        :returns: pandas dataframe with results
+
+        """
+        if not isinstance(weights, pd.DataFrame):
+            ValueError('weights must be a pandas dataframe with rsid, allele and weight')
+
+        output_location = '/tmp/plink_prs'
+
+        subjectfile = '/tmp/plink_filter_subjects.fam'
+        if subjects is None:
+            self._plink.fam.to_csv(subjectfile, index=False, sep=' ')
+        else:
+            pd.DataFrame({'iid': subjects,
+                'fid': subjects}).to_csv(subjectfile, index=False, sep=' ')
+
+        # write score file
+        scorefile = '/tmp/plink_prs_weights.score'
+        weights.to_csv(scorefile, index=False, sep=' ', header=False)
+
+        with open(os.devnull, 'w') as fp:
+            plink_run = Popen([self._bin_plink, '--bfile', self._plink_stem,
+                '--allow-no-sex', '--score', scorefile,
+                '--keep', subjectfile, '--out', output_location], stdout=fp)
+
+            plink_run.wait()
+
+        results = pd.read_table(output_location+'.profile', delim_whitespace=True)
+        return results
+
+    def clumping(self, summary_stats, p1=0.0001, p2=0.01, r2=0.5, kp=250):
+        """Performs clumping with given summary stats
+
+        :summary_stats: TODO
+        :p1: TODO
+        :p2: TODO
+        :r2: TODO
+        :kp: TODO
+        :returns: TODO
+
+        """
+        output_location = '/tmp/plink_clump'
+        var_names = summary_stats.columns
+        summary_stats.to_csv(output_location+'.report', index=False, sep=' ')
+
+
+        with open(os.devnull, 'w') as fp:
+            plink_run = Popen([self._bin_plink, '--bfile', self._plink_stem,
+                '--allow-no-sex', '--clump', output_location+'.report',
+                '--clump-p1', p1, '--clump-p2', p2,
+                '--clump-r2', r2, 
+                '--clump-kp', kp, 
+                '--out', output_location], stdout=fp)
+
+            plink_run.wait()
+
+        results = pd.read_table(output_location+'.clumped', delim_whitespace=True)
+        return results
+
+    def pruning(self, kp, step, r2):
+        """Performs variant pruning and returns a set of variants in linkage 
+        equilibrium
+
+        :kp: TODO
+        :step: TODO
+        :r2: TODO
+        :returns: TODO
+
+        """
+
+        output_location = '/tmp/plink_prune'
+
+        with open(os.devnull, 'w') as fp:
+            plink_run = Popen([self._bin_plink, '--bfile', self._plink_stem,
+                '--allow-no-sex',
+                '--indep-pairwise', kp+' '+step+' '+r2,
+                '--out', output_location], stdout=fp)
+
+            plink_run.wait()
+
+        results = pd.read_table(output_location'.prune.in', delim_whitespace=True)
+        return = results

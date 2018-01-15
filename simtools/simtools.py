@@ -76,7 +76,7 @@ class Simtools(object):
         :returns: scaled numpy matrix
 
         """
-        return (x - np.mean(x, asix=0)) / np.std(x, axis=0)
+        return (x - np.mean(x, axis=0)) / np.std(x, axis=0)
 
     def __compute_geffect(self, causal_snps, weights, subjects):
         """TODO: Docstring for _compute_geffect.
