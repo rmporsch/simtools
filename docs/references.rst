@@ -1,11 +1,12 @@
 References
 ====================
 
-.. automodule:: simtools
+
+.. automodule:: simtools.genotypes
     :members:
 
-.. automodule:: genotypes
+.. automodule:: simtools.simtools
     :members:
 
-.. automodule:: tools
+.. automodule:: simtools.tools
     :members:

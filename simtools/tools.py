@@ -191,7 +191,7 @@ class Plink(object):
     def gwas_plink(self, phenotype, subjects=None):
         """Calls plink to compute the summary statistics
 
-        :phenotype: phenotype
+        :phenotype: numpy array of phenotype(s)
         :returns: DataFrame with the results
 
         """
@@ -261,6 +261,10 @@ class Plink(object):
 
         output_location = '/tmp/plink_prs'
 
+        if os.path.isfile('/tmp/plink_prs.log'):
+            for filename in glob.glob('/tmp/plink_prs*'):
+                os.remove(filename)
+
         subjectfile = '/tmp/plink_filter_subjects.fam'
         if subjects is None:
             self._plink.fam.to_csv(subjectfile, index=False, sep=' ')
@@ -282,18 +286,22 @@ class Plink(object):
         results = pd.read_table(output_location+'.profile', delim_whitespace=True)
         return results
 
-    def clumping(self, summary_stats, p1=0.0001, p2=0.01, r2=0.5, kp=250):
+    def clumping(self, summary_stats, p1=0.0001, p2=0.01, r2=0.5, kb=250):
         """Performs clumping with given summary stats
 
-        :summary_stats: TODO
-        :p1: TODO
-        :p2: TODO
-        :r2: TODO
-        :kp: TODO
-        :returns: TODO
+        :summary_stats: summary statistics (SNP and P value column required)
+        :p1: index variant p-value threshold
+        :p2: clumped variant p-value threshold
+        :r2: r^2 threshold
+        :kp: clump kb radius
+        :returns: dataframe with clumped SNPs
 
         """
         output_location = '/tmp/plink_clump'
+
+        if os.path.isfile('/tmp/plink_clump.log'):
+            for filename in glob.glob('/tmp/plink_clump*'):
+                os.remove(filename)
         var_names = summary_stats.columns
         summary_stats.to_csv(output_location+'.report', index=False, sep=' ')
 
@@ -301,9 +309,9 @@ class Plink(object):
         with open(os.devnull, 'w') as fp:
             plink_run = Popen([self._bin_plink, '--bfile', self._plink_stem,
                 '--allow-no-sex', '--clump', output_location+'.report',
-                '--clump-p1', p1, '--clump-p2', p2,
-                '--clump-r2', r2, 
-                '--clump-kp', kp, 
+                '--clump-p1', str(p1), '--clump-p2', str(p2),
+                '--clump-r2', str(r2), 
+                '--clump-kb', str(kb), 
                 '--out', output_location], stdout=fp)
 
             plink_run.wait()
@@ -315,14 +323,17 @@ class Plink(object):
         """Performs variant pruning and returns a set of variants in linkage 
         equilibrium
 
-        :kp: TODO
-        :step: TODO
-        :r2: TODO
-        :returns: TODO
+        :kp: window size
+        :step: window step size
+        :r2: pairwise r2 threshold
+        :returns: dataframe of pruned variants
 
         """
 
         output_location = '/tmp/plink_prune'
+        if os.path.isfile('/tmp/plink_prune.log'):
+            for filename in glob.glob('/tmp/plink_prune*'):
+                os.remove(filename)
 
         with open(os.devnull, 'w') as fp:
             plink_run = Popen([self._bin_plink, '--bfile', self._plink_stem,
@@ -332,5 +343,5 @@ class Plink(object):
 
             plink_run.wait()
 
-        results = pd.read_table(output_location'.prune.in', delim_whitespace=True)
+        results = pd.read_table(output_location+'.prune.in', delim_whitespace=True)
         return results

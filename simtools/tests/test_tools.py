@@ -32,3 +32,11 @@ class TestTools(unittest.TestCase):
                 subjects=self.sim.last_random_subjects)
         self.assertEqual(prs.shape[0], 100)
 
+    def test_clumping(self):
+        results = self.plink.gwas_plink(self.pheno,
+                subjects=self.sim.last_random_subjects)
+
+        clumping = self.plink.clumping(results)
+        self.assertGreater(clumping.shape[0], 1)
+        
+
