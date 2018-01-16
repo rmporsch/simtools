@@ -38,17 +38,17 @@ class Simtools(object):
     def __causal_SNPs(self, causal, weights=None):
         """Define causal SNPs
 
-        :causal: TODO
-        :weights: TODO
-        :returns: TODO
+        :causal: number, proportion or list of causal snps
+        :weights: how to weight causal SNPs (default is 1)
+        :returns: list of causal SNPs and weights
 
         """
         causal_snps = []
         if isinstance(causal, int):
             causal_snps = np.random.choice(range(self.p), causal)
             causal_snps = self._plink.bim.index.values[causal_snps]
-        if isinstance(causal, str):
-            causal_snps = causal
+        #if isinstance(causal, str):
+        #    causal_snps = causal
         if isinstance(causal, list):
             causal_snps = self._plink.bim.index.values[np.array(causal)]
         if isinstance(causal, float):
@@ -81,8 +81,10 @@ class Simtools(object):
     def __compute_geffect(self, causal_snps, weights, subjects):
         """TODO: Docstring for _compute_geffect.
 
-        :chunk_size: TODO
-        :returns: TODO
+        :causal_snps: array of causal SNPs
+        :weights: array of weights for the SNPs
+        :subjects: list of subjects
+        :returns: vecor of size n containing the genetic effect
 
         """
         snp_chunks = self.__chunks(causal_snps, self.chunk_size)
