@@ -1,8 +1,23 @@
 Usage
 #######
 
+The main aim of Simtools is to provide an easy to use platform to simulate and manipulate
+genetic and phenotype data.
+
+The package was mainly written as a collection of tools for myself to explore various scenarios.
+It provides facilities to simulate simple categorical and continuous phenotypes from genetic data, 
+as well as more complicated multiple dependent phenotypes.
+
+In addition, the package has a connection to plink to perform various different tasks, such as allelic score computation,
+clumping and pruning.
+I also provide a vcf reader for rare variant analysis.
+
+Here I will briefly outline the usage of these classes.
+
 genotypes
 ------------
+
+The genotype module provides two classes to read and sample genotypes.
 
 For plink file you simply can::
 
@@ -25,13 +40,16 @@ Similar you can also you a vcf file::
 simtools
 --------
 
-The package provides a number of mechanisms to simulate different kinds of data.
+Simtools is the work horse of the package.
+It provides two main functions to simulate phenoytpes.
+
 You can simulate a single phenoytpe on the basis of an existing genotypematrix.::
 
     import simtools.simtools as st
     heratibiltiy = 0.4
     num_causal_snps = 10
-    sims = st.Simtools(genotypematrix)
+    plink_file = 'plink_stem'
+    sims = st.Simtools(plink_file)
     # continuous phenotype
     pheno = sims.simple_phenotype(num_causal_snps, heratibiltiy)
     # binary phenotype
@@ -70,5 +88,4 @@ This includes:
 - Computation of the genomic inflation factor
 - QQ-Plots
 - Randomly chose adjacency matrices
-    
-
+- compute GWAS, do clumping and pruning, as well as calculate allelic scores with Plink
