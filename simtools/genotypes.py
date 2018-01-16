@@ -176,9 +176,9 @@ class ReadPlink(object):
     def read_bed(self, marker=None, subjects=None):
         """read bed file
 
-        :marker: TODO
-        :subjects: TODO
-        :returns: TODO
+        :marker: list of SNPs
+        :subjects: list of subjects
+        :returns: genotypematrix of size subjects*marker
 
         """
         if marker is None:

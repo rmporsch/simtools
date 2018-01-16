@@ -69,8 +69,8 @@ class Simtools(object):
         for i in range(0, len(l), n):
             yield l[i:i + n]
 
-    def scale(self, x ):
-        """TODO: Docstring for scale.
+    def _scale(self, x ):
+        """scales a matrix or vector.
 
         :x: numpy matrix
         :returns: scaled numpy matrix
@@ -103,7 +103,7 @@ class Simtools(object):
                     subjects=subjects)
             geffect += np.dot(temp_matrix, effect)
 
-        return self.scale(geffect)
+        return self._scale(geffect)
 
     def simple_phenotype(self, causal, hera, liability=None, n=None):
         """simulates a phenotypes (continues or binary)
