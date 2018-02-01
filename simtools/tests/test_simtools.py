@@ -28,16 +28,6 @@ class TestSimtools(unittest.TestCase):
         self.assertEqual(len(pheno)-np.sum(pheno), self.n_cases)
         self.assertEqual(sum(pheno), self.n_cases)
 
-#    def test_gwas(self):
-#        #pheno = self.sim.simple_phenotype(0.1, 0.3, (0.4, self.n_cases, self.n_controls))
-#        # single thread
-#        pheno = np.random.rand(100)
-#        self.genotypematrix = np.random.rand(100, 1000)
-#        output = tools.gwas(pheno, self.genotypematrix)
-#        # multi thread
-#        #output = tools.gwas(pheno, self.genotypematrix, num_threads=4)
-#        self.assertEqual(output.shape[0], self.p)
-#        self.assertEqual(output.shape[1], 3)
     
     def test_multi_pheno(self):
         B = np.zeros((3,3))

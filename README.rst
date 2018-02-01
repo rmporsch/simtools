@@ -10,3 +10,5 @@ Currently the package provides function and classes to:
 - provides a connection to plink to perform various tasks (such as GWAS, clumpling, etc.)
 - a number of additional tools to perform various tasks on summary statistics
 - some limited plotting functions
+
+Documentation is available [here](http://simtools.readthedocs.io/en/latest/).

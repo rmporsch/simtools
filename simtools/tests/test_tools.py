@@ -12,7 +12,7 @@ class TestTools(unittest.TestCase):
         self.plink_loc = "/home/robert/software/plink"
 
         self.sim = si.Simtools(self.ff)
-        self.pheno = self.sim.simple_phenotype(0.2, 0.4, n=100)
+        self.pheno = self.sim.simple_phenotype(0.2, 0.6, n=100)
         self.plink = tools.Plink(self.ff, self.plink_loc)
 
     def test_plink(self):
@@ -38,5 +38,12 @@ class TestTools(unittest.TestCase):
 
         clumping = self.plink.clumping(results)
         self.assertGreater(clumping.shape[0], 1)
+
+    def test_qqplot(self):
+        results = self.plink.gwas_plink(self.pheno,
+                subjects=self.sim.last_random_subjects)
+
+        tools.qqplot(results.P.values)
+
         
 

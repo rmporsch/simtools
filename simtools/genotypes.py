@@ -189,11 +189,11 @@ class ReadPlink(object):
 
         if subjects is None:
             N_size = self.N
-            subjects = self.index.values
+            subjects = self.fam.index.values
         else:
             N_size = len(subjects)
 
-        genotypematrix = np.zeros((N_size, P_size))
+        genotypematrix = np.zeros((N_size, P_size), dtype=np.int8)
 
         j = 0
         for m, g in self.plinkfile.iter_geno_marker(marker):

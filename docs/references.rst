@@ -1,7 +1,6 @@
 References
 ====================
 
-
 .. automodule:: simtools.genotypes
     :members:
 

@@ -269,8 +269,8 @@ class Plink(object):
         if subjects is None:
             self._plink.fam.to_csv(subjectfile, index=False, sep=' ')
         else:
-            pd.DataFrame({'iid': subjects,
-                'fid': subjects}).to_csv(subjectfile, index=False, sep=' ')
+            pd.DataFrame({'IID': subjects,
+                'FID': subjects}).to_csv(subjectfile, index=False, sep=' ')
 
         # write score file
         scorefile = '/tmp/plink_prs_weights.score'
