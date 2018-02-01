@@ -8,7 +8,6 @@ import pymp
 import scipy
 import os
 import glob
-from matplotlib import pyplot as plt
 import statsmodels.api as sm
 from subprocess import Popen
 from simtools.genotypes import ReadPlink
@@ -43,41 +42,6 @@ def qqplot(dat, grouping='pheno', pvalue='pvalue'):
     plt.ylabel('Observed')
     plt.title('QQ plot')
     plt.show()
-
-def gwas(phenotypes, genotypematrix, num_threads=1, verbose=False):
-    """Computes summary statistics 
-
-    :phenotypes: Vector of phenotypes
-    :genotypematrix: numpy matrix of genotypes
-    :num_threads: number of threads to use
-    :verbose: print status of the GWAS
-    :returns: pandas DataFrame with the summary statistics
-
-    """
-
-    output = pymp.shared.array((genotypematrix.shape[1], 3))
-    if verbose:
-        print('running GWAS on %i individuals and %i SNPs' % genotypematrix.shape)
-
-    if len(np.unique(phenotypes))==2:
-        # logistic regression
-        with pymp.Parallel(num_threads) as th:
-            for p in th.range(genotypematrix.shape[1]):
-                model = sm.GLM(phenotypes, sm.add_constant(genotypematrix[:,p]),
-                        family=sm.families.Binomial()).fit()
-                output[p,:] = model.params[1], model.bse[1], model.pvalues[1]
-    else:
-        # normal regression
-        with pymp.Parallel(num_threads) as th:
-            for p in th.range(genotypematrix.shape[1]):
-                model = sm.GLM(phenotypes, sm.add_constant(genotypematrix[:,p]),
-                        family=sm.families.Gaussian()).fit()
-                output[p,:] = model.params[1], model.bse[1], model.pvalues[1]
-
-    output = pd.DataFrame(output, columns=['beta', 'std_err', 'p_value'],
-            index=range(genotypematrix.shape[1]))
-
-    return output
 
 
 def inflation_factor(s, stats_type='pval', rounding=3):
