@@ -4,11 +4,11 @@ Functions to perform various tasks often needed when using simulated data
 import pandas as pd
 import re
 import numpy as np
-import pymp
 import scipy
 import os
 import glob
 import statsmodels.api as sm
+import matplotlib.pyplot as plt
 from subprocess import Popen
 from simtools.genotypes import ReadPlink
 

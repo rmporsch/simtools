@@ -13,7 +13,7 @@ class TestSimtools(unittest.TestCase):
     def setUp(self):
         self.n = 100
         self.p = 1000
-        self.ff = "/home/robert/Documents/projects/prs/data/genotypes/subset_10k"
+        self.ff = "/home/robert/Documents/projects/risk_prediction/data/subset_10k"
         self.n_cases = 50
         self.n_controls = 50
         self.sim = si.Simtools(self.ff)

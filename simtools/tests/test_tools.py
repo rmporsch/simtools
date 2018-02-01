@@ -8,7 +8,7 @@ import pymp
 class TestTools(unittest.TestCase):
 
     def setUp(self):
-        self.ff = "/home/robert/Documents/projects/prs/data/genotypes/subset_10k"
+        self.ff = "/home/robert/Documents/projects/risk_prediction/data/subset_10k"
         self.plink_loc = "/home/robert/software/plink"
 
         self.sim = si.Simtools(self.ff)

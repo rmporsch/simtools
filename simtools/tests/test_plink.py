@@ -12,7 +12,7 @@ class TestPlink(unittest.TestCase):
     def setUp(self):
         self.n = 1000
         self.p = 100
-        self.ff = "/home/robert/Documents/projects/prs/data/genotypes/subset_10k"
+        self.ff = "/home/robert/Documents/projects/risk_prediction/data/subset_10k"
         self.testread = gp.ReadPlink(self.ff)
 
     def test_sampling(self):
