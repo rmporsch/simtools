@@ -53,6 +53,7 @@ def inflation_factor(s, stats_type='pval', rounding=3):
     :returns: genomic inflation factor lambda
 
     """
+    z = s
     if stats_type=='pval':
         z = scipy.stats.norm.ppf(s/2)
     if stats_type=='chisq':
@@ -165,7 +166,7 @@ class Plink(object):
         pheno = pd.DataFrame()
 
         if  phenotype.ndim > 1:
-            pheno = pd.DataFrame(phenotypes,
+            pheno = pd.DataFrame(phenotype,
                     columns=['p'+str(k+1) for k in range(phenotype.shape[1])])
         else:
             pheno = pd.DataFrame(phenotype, columns=['pheno'])
@@ -197,8 +198,8 @@ class Plink(object):
         elif len(assoc_files) > 1:
             out_results = []
             for f in assoc_files:
-                pheno_name = re.sub(r'(/tmp/plink_temp\.|\.assoc\.|\.linear|\.logistic)',
-                        '',f)
+                pheno_name = re.sub(r"(/tmp/plink_temp\.|\.assoc\.|\.linear|\.logistic)",
+                        '', f)
                 print(pheno_name)
                 temp = pd.read_table(f, delim_whitespace=True)
                 temp['Phenotype'] = pheno_name

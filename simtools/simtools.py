@@ -1,8 +1,8 @@
-import pandas as pd
-import numpy as np
 import sys
+import numpy as np
 from scipy.optimize import root
 from simtools.genotypes import ReadPlink
+
 
 class Simtools(object):
     """Initiates a simtools object to generate various different phenotypes"""
@@ -21,7 +21,7 @@ class Simtools(object):
             self._id_subjects = self._plink.fam.index.values
             self.n = self._plink.fam.shape[0]
         else:
-            self.n = len(n)
+            self.n = len(subjects)
             self.subjects = subjects
             self._id_subjects = self._plink.fam.iid.get_loc(self.subjects)
 
@@ -46,16 +46,14 @@ class Simtools(object):
         if isinstance(causal, int):
             causal_snps = np.random.choice(range(self.p), causal)
             causal_snps = self._plink.bim.index.values[causal_snps]
-        #if isinstance(causal, str):
-        #    causal_snps = causal
         if isinstance(causal, list):
             causal_snps = self._plink.bim.index.values[np.array(causal)]
         if isinstance(causal, float):
-            n_causal = int(np.floor(self.p*causal))
+            n_causal = int(np.floor(self.p * causal))
             causal_snps = np.random.choice(range(self.p), n_causal)
             causal_snps = self._plink.bim.index.values[causal_snps]
 
-        if weights==None:
+        if weights == None:
             weights = np.ones(len(causal_snps))
         else:
             if len(weights) != len(self.causal_snps):
@@ -68,7 +66,7 @@ class Simtools(object):
         for i in range(0, len(l), n):
             yield l[i:i + n]
 
-    def _scale(self, x ):
+    def _scale(self, x):
         """scales a matrix or vector.
 
         :x: numpy matrix
@@ -92,16 +90,16 @@ class Simtools(object):
         n = len(subjects)
 
         # check number of phenotypes
-        if len(t)>1:
+        if len(t) > 1:
             t = t[1]
-            geffect = np.zeros((n,t))
+            geffect = np.zeros((n, t))
         else:
             t = 1
             geffect = np.zeros((n,))
 
-        for snps,effect in zip(snp_chunks, effect_chunks):
+        for snps, effect in zip(snp_chunks, effect_chunks):
             temp_matrix = self._plink.read_bed(marker=snps,
-                    subjects=subjects)
+                                               subjects=subjects)
             geffect += np.dot(temp_matrix, effect)
 
         return self._scale(geffect)
@@ -126,17 +124,17 @@ class Simtools(object):
         geffect = self.__compute_geffect(causal_snps, weights, subjects)
 
         if liability is None:
-            pheno = np.sqrt(hera)*geffect + np.sqrt(1-hera)*np.random.normal(0,
-                    np.sqrt(1), len(subjects))
+            pheno = np.sqrt(hera) * geffect + np.sqrt(1 - hera) * np.random.normal(0,
+                                                                                   np.sqrt(1), len(subjects))
             return pheno
 
-        elif isinstance(liability, tuple) and len(liability)==3:
+        elif isinstance(liability, tuple) and len(liability) == 3:
             threshold = liability[0]
             ncases = liability[1]
             ncontrols = liability[2]
 
             cases, controls = self.__liability_model(ncases, ncontrols,
-                    threshold, hera, geffect)
+                                                     threshold, hera, geffect)
             pheno = np.append(np.repeat(1, len(cases)), np.repeat(0, len(controls)))
             self.liability_cases_controls = np.append(cases, controls)
             self.last_random_subjects = self.subjects[self.liability_cases_controls]
@@ -146,7 +144,7 @@ class Simtools(object):
             sys.exit('values are missing')
 
     def __liability_model(self, num_cases, num_controls,
-            threshold, hera, geffect, max_iter=10000):
+                          threshold, hera, geffect, max_iter=10000):
         """simulates cases and controls
 
         :num_cases: number of cases
@@ -159,16 +157,16 @@ class Simtools(object):
         container_controls = []
 
         for item in range(max_iter):
-            pheno = np.sqrt(hera)*geffect + np.sqrt(1-hera)*np.random.normal(0,
-                    np.sqrt(1), self.n)
+            pheno = np.sqrt(hera) * geffect + np.sqrt(1 - hera) * np.random.normal(0,
+                                                                                   np.sqrt(1), self.n)
             if len(container_cases) < num_cases:
-                container_cases.append(np.argwhere(pheno >=threshold))
+                container_cases.append(np.argwhere(pheno >= threshold))
 
             if len(container_controls) < num_controls:
-                container_controls.append(np.argwhere(pheno <threshold))
+                container_controls.append(np.argwhere(pheno < threshold))
 
-            if (len(container_cases)>=num_cases and
-                    len(container_controls) >=num_controls):
+            if (len(container_cases) >= num_cases and
+                    len(container_controls) >= num_controls):
                 break
 
         # unlist
@@ -194,7 +192,8 @@ class Simtools(object):
         t = lamb.shape[0]
         invert = np.linalg.inv(np.identity(t) - lamb)
         D = np.diag(x)
-        C = invert.dot(B); F = invert.dot(D)
+        C = invert.dot(B)
+        F = invert.dot(D)
 
         outcov = C.dot(np.cov(G.T)).dot(C.T) + F.dot(np.identity(t)).dot(F.T)
         return outcov.diagonal() - np.ones(t)
@@ -212,10 +211,10 @@ class Simtools(object):
     def __multiple_effect_vectors(self, t, num_causal_snps):
         Beta = np.zeros([self.p, t])
         causal_index = [np.random.randint(low=0, high=self.p, size=k)
-                for k in num_causal_snps]
+                        for k in num_causal_snps]
         # simualte effect sizes for each variant
         for i in range(Beta.shape[1]):
-            Beta[causal_index[i],i] = 1
+            Beta[causal_index[i], i] = 1
 
         return Beta
 
@@ -229,7 +228,7 @@ class Simtools(object):
         :returns: matrix of size n*t
 
         """
-        if np.all(lamb.shape!=B.shape):
+        if np.all(lamb.shape != B.shape):
             raise NameError("""dimensions of transition matrix and
                     genetic effect is not the same""")
 
@@ -249,7 +248,7 @@ class Simtools(object):
 
         G = self.__compute_geffect(causal_snps, Beta, subjects)
 
-        sol = root(lambda k:self.__estimateF(k, G=G, lamb=lamb, B=B),
-             np.array([0.3, 0.3,0.3]), method='krylov')
+        sol = root(lambda k: self.__estimateF(k, G=G, lamb=lamb, B=B),
+                   np.array([0.3, 0.3, 0.3]), method='krylov')
         phenotypes = self.__compute_multi_pheno(sol.x, G, lamb, B)
         return phenotypes
