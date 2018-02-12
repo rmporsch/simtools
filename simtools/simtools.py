@@ -4,7 +4,6 @@ import sys
 from scipy.optimize import root
 from simtools.genotypes import ReadPlink
 
-
 class Simtools(object):
     """Initiates a simtools object to generate various different phenotypes"""
 

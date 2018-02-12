@@ -1,10 +1,7 @@
 import unittest
-from simtools import genotypes as gp
 from simtools import simtools as si
-from simtools import tools
 import numpy as np
-import pandas as pd
-import pymp
+
 
 class TestSimtools(unittest.TestCase):
 
@@ -23,16 +20,15 @@ class TestSimtools(unittest.TestCase):
         self.assertAlmostEqual(np.var(pheno), 1.000, delta=0.2)
         self.assertAlmostEqual(np.mean(pheno), 0.000, delta=0.2)
 
-    def test_liabilitymodel(self):
+    def test_liability_model(self):
         pheno = self.sim.simple_phenotype(0.1, 0.3, (0.4, self.n_cases, self.n_controls))
         self.assertEqual(len(pheno)-np.sum(pheno), self.n_cases)
         self.assertEqual(sum(pheno), self.n_cases)
 
-    
     def test_multi_pheno(self):
-        B = np.zeros((3,3))
-        lamb = np.zeros((3,3))
-        num_causal = [3,3,3]
+        B = np.zeros((3, 3))
+        lamb = np.zeros((3, 3))
+        num_causal = [3, 3, 3]
         pheno = self.sim.multi_phenotype(lamb, B, num_causal, n=self.n)
         self.assertEqual(pheno.shape[1], self.n)
         self.assertEqual(pheno.shape[0], 3)
@@ -40,6 +36,7 @@ class TestSimtools(unittest.TestCase):
         self.assertAlmostEqual(var[0], 1, delta=0.2)
         self.assertAlmostEqual(var[1], 1, delta=0.2)
         self.assertAlmostEqual(var[2], 1, delta=0.2)
+
 
 if __name__ == '__main__':
     unittest.main()
