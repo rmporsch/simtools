@@ -1,6 +1,7 @@
 import unittest
 from simtools import genotypes as gp
 import numpy as np
+import vcf
 import pandas as pd
 import os
 
@@ -11,6 +12,7 @@ class TestVCF(unittest.TestCase):
     def setUp(self):
         self.n = 1000
         self.p = 100
+        self.f = 'data/example.vcf.gz'
         self.testread = gp.ReadVCF('data/example.vcf.gz')
 
     def test_simple_genotype(self):
@@ -20,20 +22,47 @@ class TestVCF(unittest.TestCase):
         sum_genotypes = np.sum(temp)
         self.assertLess(sum_genotypes, self.n*self.p, 'sum of all variants is >(n*p)')
 
-#    def test_vcf_read(self):
-#        print('This might take a while...')
-#        self.testread.read_vcf(index_file=True)
-#        temp = pd.read_table('.temp/variant.list', header=None, sep=' ')
-#        self.assertEqual(temp.shape[0], 970, 'variant file seems incorrect')
-#        self.assertEqual(temp.shape[1], 4, 'variant file seems incorrect')
+    def test__get_samples(self):
+        self.assertGreater(len(self.testread._samples), 1)
 
-#    def test_sampling(self):
-#        self.testread.read_vcf(index_file=False)
-#        temp = self.testread.sample(self.n, self.p, 0.1)
-#        self.assertEqual(temp.shape[0], self.n, 'incorrect row numbers')
-#        maf = temp.mean(axis=0)
-#        self.assertEqual(len(maf), self.p, 'incorrect col numbers')
-#        self.assertFalse(np.any(maf < 0.1), 'incorrect allele frequencies')
+    def test__get_genotypes(self):
+        samples = ['HG00096', 'HG00097', 'HG00099']
+        reader = vcf.Reader(filename=self.f)
+        record = next(reader)
+        gt = self.testread._get_genotypes(samples, record, False)
+        self.assertTrue(np.sum(gt)==2)
+        self.assertTrue(len(gt), 3)
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_get_variants_info(self):
+        self.testread.get_allele_freq('output.txt')
+        dat = pd.read_table('output.txt', delim_whitespace=True)
+        self.assertTrue(dat.shape[0] > 1)
+        self.assertTrue(dat.shape[1] == 4)
+
+    def test_sampling_variants(self):
+        out = self.testread._sample_variants(10)
+        dat = pd.read_csv(out, delim_whitespace=True, header=None)
+        print(dat)
+        self.assertTrue(dat.shape[0] == 10)
+        self.assertTrue(dat.shape[1] == 4)
+
+    def test_sampling_subjects(self):
+        out = self.testread._sample_subjects(10)
+        is_in = np.isin(out, self.testread._samples)
+        self.assertTrue(len(out) == 10)
+        self.assertTrue(np.all(is_in))
+
+    def test_sample(self):
+        self.testread.maf = 0.5
+        gp = self.testread.sample(10,10)
+        self.assertTrue(np.sum(np.sum(gp)) > 1)
+        self.assertTrue(gp.shape[0] == 10)
+
+    def test_genotype_loading(self):
+        self.testread.maf = 0.5
+        self.testread.get_allele_freq('output.txt')
+        out = self.testread._sample_subjects(10)
+        gp = self.testread.load_genotype_matrix(out, 'output.txt')
+        self.assertTrue(gp.shape[0] == 10)
+        self.assertTrue(gp.shape[1] > 10)
+        self.assertTrue(np.sum(np.sum(gp)) > 10)

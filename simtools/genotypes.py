@@ -38,12 +38,22 @@ class ReadVCF(object):
         self._samples = None
         self._randomset = None
         self._get_samples()
+        self.maf = 0.01
 
     def _get_samples(self):
         reader = vcf.Reader(filename=self._vcf_file)
         self._samples = reader.samples
 
     def _get_genotypes(self, samples, records, switch):
+        """
+        Gets the genotypes from records
+
+        :param samples: list of subject IDs
+        :param records: record object
+        :param switch:  switch minor major allele *bool*
+        :return: list of genotypes
+        """
+
         variant = np.zeros(len(samples))
         for idx, sample in enumerate(samples):
             try:
@@ -63,6 +73,13 @@ class ReadVCF(object):
         return variant
 
     def criteria(self, record):
+        """
+        Criteria to filter out record
+
+        :param record: record objects
+        :return: two values *bool*; process (pass filter), switch (switch major/minor allele)
+        """
+
         process = True
         switch = False
         if record.call_rate <= 0.9:
@@ -73,26 +90,42 @@ class ReadVCF(object):
             process = False
 
         if record.aaf[0] > 0.5:
-            if (1-record.aaf[0]) > 0.01:
+            if (1-record.aaf[0]) > self.maf:
                 process = False
             switch = True
         else:
-            if record.aaf[0] > 0.01:
+            if record.aaf[0] > self.maf:
                 process = False
         return process, switch
 
     def _check_samples(self, samples):
+        """
+        Check if samples are in vcf file
+
+        :param samples: list of samples
+        :return: samples in vcf file
+        """
         check = [k not in self._samples for k in samples]
         num_not_in_vcf = np.sum(check)
         if num_not_in_vcf > 0:
-            print(num_not_in_vcf, 'were not in vcf file and were removed')
+            with open('/tmp/excluded.subjects', 'w') as f:
+                for item in samples[np.array(check)]:
+                    f.write("%s\n" % item)
+            print(num_not_in_vcf, 'were not in vcf file and were removed; see /tmp/excluded.subjects')
         return samples[~np.array(check)]
 
     def load_genotype_matrix(self, subjects, variants):
+        """
+        Load genotype matrix
+
+        :param subjects: list of subjects
+        :param variants: path to variant file *str*; requires at least 2 columns [CHR, BP]; tab separated
+        :return: matrix of genotypes
+        """
         if not os.path.isfile(variants):
             raise NameError('File does not exist')
         subjects = self._check_samples(subjects)
-        variants = pd.read_table(variants, header=None, sep=' ')
+        variants = pd.read_table(variants, header=0, sep=' ')
         if variants.shape[1] < 2:
             raise NameError('Variant file does not seem to have the right amount of columns')
         matrix = np.zeros((len(subjects), variants.shape[0]))
@@ -100,12 +133,12 @@ class ReadVCF(object):
 
         vcf_reader = vcf.Reader(filename=self._vcf_file)
         for index, row in variants.iterrows():
-            record = vcf_reader.fetch(str(row[0]), row[1], row[1])
-            process, switch = self.criteria(record)
-            if not process:
-                skiped_variants.append(index)
-                continue
-            matrix[:, index] = self._get_genotypes(samples, record, switch)
+            for record in vcf_reader.fetch(str(row[0]), row[1]-1, row[1]):
+                process, switch = self.criteria(record)
+                if not process:
+                    skiped_variants.append(index)
+                    continue
+                matrix[:, index] = self._get_genotypes(subjects, record, switch)
 
         # remove skiped variants
         matrix = np.delete(matrix, skiped_variants, 1)
@@ -121,74 +154,56 @@ class ReadVCF(object):
         with open(output_path, 'w') as f:
             for record in vcf_reader:
                 f.write('%s %i %s %f\n' %
-                        (record.CHROM, record.POS, record.ID, record.aaf))
+                        (record.CHROM, record.POS, record.ID, record.aaf[0]))
 
-    def __sample_variants(self, p, write_disk=False):
+    def _sample_variants(self, p, file_path=None):
         """Sample a random set of variants
 
         :maf: minor allele frequency cutoff
         :p: number of variants to sample
 
         """
-        self._variants = pd.read_table('./.temp/variant.list',
-                header=None, sep=' ',
-                names=['Chrom', 'Pos', 'ID', 'AF'])
+        output_path = '/tmp/subsample_variant.list'
+        if file_path is None:
+            file_path = '/tmp/variant.list'
+            if os.path.isfile(file_path):
+                self._variants = pd.read_table(file_path,
+                                               header=None, sep=' ',
+                                               names=['Chrom', 'Pos', 'ID', 'AF'])
+            else:
+                self.get_allele_freq(file_path)
+                self._variants = pd.read_table(file_path,
+                                               header=None, sep=' ',
+                                               names=['Chrom', 'Pos', 'ID', 'AF'])
+        else:
+            self._variants = pd.read_table(file_path, header=None, sep=' ')
 
-        self._variants = self._variants.query('AF >= @maf and AF <= (1- @maf)')
         self._sampled = self._variants.sample(n=p)
-        
-        if write_disk:
-            self._sampled.to_csv('.temp/subsample_variant.list')
+        self._sampled.to_csv(output_path, sep=' ', index=False, header=False)
+        return output_path
 
-    def __sample_subjects(self, n):
+    def _sample_subjects(self, n):
         """Sample a random set of subjects
 
         :n: number of subjects to sample
 
         """
-        self._randomset = np.random.choice(self._samples, n, replace=True)
+        return np.random.choice(self._samples, n, replace=True)
 
-    def sample(self, n, p, write_disk=False):
+    def sample(self, n, p):
         """Random sample a set of variants and subjects
 
         :maf: minor allele frequency cutoff
         :n: number of subjects to sample
         :p: number of variants to sample
-        :write_disk: bool, write to disk a list of variants
         :returns: a numpy matrix of size n*p
 
         """
-        self.__sample_variants(p, write_disk)
-        self.__sample_subjects(n)
+        variant_file = self._sample_variants(p)
+        subjects = self._sample_subjects(n)
 
-        genotypematrix = np.zeros((n,p))
-        reader = vcf.Reader(filename=self._vcf_file)
-        i = 0
-        for index, row in self._sampled.iterrows():
-            record = reader.fetch(str(row[0]), row[1], row[1])
-            for rr in record:
-                flip = True if rr.aaf > 0.5 else False
-                u = 0
-                for sample in rr.samples:
-                    if sample.sample in self._randomset:
-                        genotypematrix[u,i] = self.__count_genotypes(sample['GT'], flip)
-                        u += 1
-            i += 1
-
+        genotypematrix = self.load_genotype_matrix(subjects, variant_file)
         return genotypematrix
-
-    def __count_genotypes(self, rr, flip):
-        """counts the genotypes at a given position
-        !!! missing is counted as 0 !!!
-
-        :rr: genotype string from vcf object
-        :returns: 0, 1 or 2
-
-        """
-        genotype = np.array(list(map(int, re.findall(r'(\d+)', rr))))
-        if flip:
-            genotypes = abs(genotype - 1)
-        return sum(genotype)
 
 
 class ReadPlink(object):
