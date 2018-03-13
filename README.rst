@@ -11,4 +11,4 @@ Currently the package provides function and classes to:
 - a number of additional tools to perform various tasks on summary statistics
 - some limited plotting functions
 
-Documentation is available [here](http://simtools.readthedocs.io/en/latest/).
+Documentation is available at http://simtools.readthedocs.io/en/latest/.
