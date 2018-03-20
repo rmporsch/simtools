@@ -13,10 +13,10 @@ from tqdm import tqdm
 def simple_genotype_matrix(n, p):
     """Generates a simple matrix containing either 0 or 1 of size nxp
 
-    :n: number of samples
-    :p: number of genotypes
-    :min_maf: min frequency
-    :max_maf: max frequency
+    :param n: number of samples
+    :param p: number of genotypes
+    :param min_maf: min frequency
+    :param max_maf: max frequency
     :returns: a numpy matrix of size nxp
 
     """
@@ -33,7 +33,7 @@ class ReadVCF(object):
 
     def __init__(self, vcffile):
         """
-        :vcffile: path to the vcf file
+        :param vcffile: path to the vcf file
 
         """
         self._vcf_file = vcffile
@@ -137,7 +137,7 @@ class ReadVCF(object):
     def get_allele_freq(self, output_path):
         """Reads the vcf file and gets and index
 
-        :index_file: location of the index file
+        :param index_file: location of the index file
 
         """
         vcf_reader = vcf.Reader(filename=self._vcf_file)
@@ -149,8 +149,8 @@ class ReadVCF(object):
     def _sample_variants(self, p, file_path=None):
         """Sample a random set of variants
 
-        :maf: minor allele frequency cutoff
-        :p: number of variants to sample
+        :param maf: minor allele frequency cutoff
+        :param p: number of variants to sample
 
         """
         output_path = '/tmp/subsample_variant.list'
@@ -175,7 +175,7 @@ class ReadVCF(object):
     def _sample_subjects(self, n):
         """Sample a random set of subjects
 
-        :n: number of subjects to sample
+        :param n: number of subjects to sample
 
         """
         return np.random.choice(self._samples, n, replace=True)
@@ -183,9 +183,9 @@ class ReadVCF(object):
     def sample(self, n, p):
         """Random sample a set of variants and subjects
 
-        :maf: minor allele frequency cutoff
-        :n: number of subjects to sample
-        :p: number of variants to sample
+        :param maf: minor allele frequency cutoff
+        :param n: number of subjects to sample
+        :param p: number of variants to sample
         :returns: a numpy matrix of size n*p
 
         """
@@ -245,7 +245,7 @@ class ReadPlink(object):
 
     def __init__(self, plinkstem):
         """
-        :plinkstem: plink stem file path
+        :param plinkstem: plink stem file path
 
         """
         self._plinkstem = plinkstem
@@ -266,9 +266,9 @@ class ReadPlink(object):
         sample will load the genotypes of all subjects before randomly sample
         subjects IDs.
 
-        :n: number of subjects to sample
-        :p: number of variants to sample
-        :write_disk: bool, write to disk a list of variants
+        :param n: number of subjects to sample
+        :param p: number of variants to sample
+        :param write_disk: bool, write to disk a list of variants
         :returns: a numpy matrix of size n*p
 
         """
@@ -287,8 +287,8 @@ class ReadPlink(object):
     def read_bed(self, marker=None, subjects=None):
         """read bed file
 
-        :marker: list of SNPs
-        :subjects: list of subjects
+        :param marker: list of SNPs
+        :param subjects: list of subjects
         :returns: genotypematrix of size subjects*marker
 
         """
