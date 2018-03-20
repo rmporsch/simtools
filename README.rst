@@ -17,6 +17,7 @@ Installation
 ----------------
 
 .. code:: python
+
     git clone git@github.com:rmporsch/simtools.git
     cd simtools
     python setup.py
