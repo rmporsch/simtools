@@ -22,10 +22,10 @@ class TestVCF(unittest.TestCase):
         sum_genotypes = np.sum(temp)
         self.assertLess(sum_genotypes, self.n*self.p, 'sum of all variants is >(n*p)')
 
-    def test__get_samples(self):
+    def test_get_samples(self):
         self.assertGreater(len(self.testread._samples), 1)
 
-    def test__get_genotypes(self):
+    def test_get_genotypes(self):
         samples = ['HG00096', 'HG00097', 'HG00099']
         reader = vcf.Reader(filename=self.f)
         record = next(reader)
@@ -66,3 +66,17 @@ class TestVCF(unittest.TestCase):
         self.assertTrue(gp.shape[0] == 10)
         self.assertTrue(gp.shape[1] > 10)
         self.assertTrue(np.sum(np.sum(gp)) > 10)
+
+    def test_burden(self):
+        def burden(cases, controls):
+            return np.abs(np.sum(np.sum(cases)) - np.sum(np.sum(controls)))
+
+        tests = {'burden': burden}
+        self.testread.maf = 0.5
+        # self.testread.get_allele_freq('output.txt')
+        cases = self.testread._sample_subjects(10)
+        controls = self.testread._sample_subjects(10)
+        gp = self.testread.binary_test(cases, controls, tests, 'output.txt', 10)
+        self.assertTrue(len(gp) > 1)
+        self.assertTrue(gp['burden_p'] > 0)
+        self.assertTrue(gp['burden_p'] < 1)

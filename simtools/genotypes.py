@@ -6,6 +6,8 @@ import re
 import vcf
 import os
 from pyplink import PyPlink
+from tqdm import tqdm
+
 
 
 def simple_genotype_matrix(n, p):
@@ -82,20 +84,8 @@ class ReadVCF(object):
 
         process = True
         switch = False
-        if record.call_rate <= 0.9:
-            process = False
-        if not record.is_snp:
-            process = False
-        if len(record.aaf) > 1:
-            process = False
-
         if record.aaf[0] > 0.5:
-            if (1-record.aaf[0]) > self.maf:
-                process = False
             switch = True
-        else:
-            if record.aaf[0] > self.maf:
-                process = False
         return process, switch
 
     def _check_samples(self, samples):
@@ -125,7 +115,7 @@ class ReadVCF(object):
         if not os.path.isfile(variants):
             raise NameError('File does not exist')
         subjects = self._check_samples(subjects)
-        variants = pd.read_table(variants, header=0, sep=' ')
+        variants = pd.read_table(variants, header=None, sep=' ')
         if variants.shape[1] < 2:
             raise NameError('Variant file does not seem to have the right amount of columns')
         matrix = np.zeros((len(subjects), variants.shape[0]))
@@ -204,6 +194,49 @@ class ReadVCF(object):
 
         genotypematrix = self.load_genotype_matrix(subjects, variant_file)
         return genotypematrix
+
+    def binary_test(self, cases, controls, tests, variants, iteration):
+        """
+        Computes p-values for a binary phenotype for various different tests
+
+        :param cases: list of case names
+        :param controls: list of control names
+        :param tests: dict of tests
+        :param variants: path to variant files
+        :param iteration: number of iterations to compute p-values
+        :return: dict with the results
+        """
+
+        cases = self.load_genotype_matrix(cases, variants)
+        controls = self.load_genotype_matrix(controls, variants)
+
+        n_cases = len(cases)
+        n_controls = len(controls)
+
+        output = {'n_cases': n_cases,
+                  'n_controls': n_controls,
+                  'n_var': cases.shape[1]}
+        null = {}
+
+        for i, (func_name, func) in enumerate(tests.items()):
+            output[func_name] = func(cases, controls)
+            null[func_name] = []
+
+        genotype_matrix = np.vstack((cases, controls))
+        del cases
+        del controls
+        n_subjects = genotype_matrix.shape[0]
+
+        for i in tqdm(range(iteration)):
+            temp = genotype_matrix
+            np.random.shuffle(temp)
+            for u, (func_name, func) in enumerate(tests.items()):
+                null[func_name].append(func(temp[0:n_cases, :], temp[n_cases:n_subjects, :]))
+
+        for i, (func_name, func) in enumerate(tests.items()):
+            output[func_name+'_p'] = np.mean(null[func_name] >= output[func_name])
+
+        return output
 
 
 class ReadPlink(object):
