@@ -62,7 +62,7 @@ class TestVCF(unittest.TestCase):
         self.testread.maf = 0.5
         self.testread.get_allele_freq('output.txt')
         out = self.testread._sample_subjects(10)
-        gp = self.testread.load_genotype_matrix(out, 'output.txt')
+        gp = self.testread.read_vcf(out, 'output.txt')
         self.assertTrue(gp.shape[0] == 10)
         self.assertTrue(gp.shape[1] > 10)
         self.assertTrue(np.sum(np.sum(gp)) > 10)

@@ -1,8 +1,5 @@
 import unittest
-import numpy as np
-import pandas as pd
 import os
-from pandas_plink import example_file_prefix
 from simtools import genotypes as gp
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')

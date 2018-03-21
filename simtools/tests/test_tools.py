@@ -2,8 +2,6 @@ import unittest
 from simtools import tools
 from simtools import simtools as si
 import numpy as np
-import pandas as pd
-import pymp
 
 class TestTools(unittest.TestCase):
 

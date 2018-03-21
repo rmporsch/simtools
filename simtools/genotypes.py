@@ -74,7 +74,7 @@ class ReadVCF(object):
             variant = np.abs(variant - 2)
         return variant
 
-    def criteria(self, record):
+    def _criteria(self, record):
         """
         Criteria to filter out record
 
@@ -104,7 +104,7 @@ class ReadVCF(object):
             print(num_not_in_vcf, 'were not in vcf file and were removed; see /tmp/excluded.subjects')
         return samples[~np.array(check)]
 
-    def load_genotype_matrix(self, subjects, variants):
+    def read_vcf(self, subjects, variants):
         """
         Load genotype matrix
 
@@ -124,7 +124,7 @@ class ReadVCF(object):
         vcf_reader = vcf.Reader(filename=self._vcf_file)
         for index, row in variants.iterrows():
             for record in vcf_reader.fetch(str(row[0]), row[1]-1, row[1]):
-                process, switch = self.criteria(record)
+                process, switch = self._criteria(record)
                 if not process:
                     skiped_variants.append(index)
                     continue
@@ -192,7 +192,7 @@ class ReadVCF(object):
         variant_file = self._sample_variants(p)
         subjects = self._sample_subjects(n)
 
-        genotypematrix = self.load_genotype_matrix(subjects, variant_file)
+        genotypematrix = self.read_vcf(subjects, variant_file)
         return genotypematrix
 
     def binary_test(self, cases, controls, tests, variants, iteration):
@@ -207,8 +207,8 @@ class ReadVCF(object):
         :return: dict with the results
         """
 
-        cases = self.load_genotype_matrix(cases, variants)
-        controls = self.load_genotype_matrix(controls, variants)
+        cases = self.read_vcf(cases, variants)
+        controls = self.read_vcf(controls, variants)
 
         n_cases = len(cases)
         n_controls = len(controls)
@@ -258,6 +258,8 @@ class ReadPlink(object):
         self.bim = self.plinkfile.get_bim()
         self.N = self.fam.shape[0]
         self.P = self.bim.shape[0]
+        self._sample_subjects = None
+        self._sample_variants = None
 
 
     def sample(self, n, p, write_disk=False):
@@ -272,15 +274,15 @@ class ReadPlink(object):
         :returns: a numpy matrix of size n*p
 
         """
-        self.__sample_subjects = np.random.choice(self.fam.index.values, n, replace=True)
-        self.__sample_variants = np.random.choice(self.bim.index.values, p)
+        self._sample_subjects = np.random.choice(self.fam.index.values, n, replace=True)
+        self._sample_variants = np.random.choice(self.bim.index.values, p)
 
         if write_disk:
-            self.bim.iloc[self.__sample_variants].to_csv('sampled_variants.csv')
-            self.bim.iloc[self.__sample_subjects].to_csv('sampled_subjects.csv')
+            self.bim.iloc[self._sample_variants].to_csv('sampled_variants.csv')
+            self.fam.iloc[self._sample_subjects].to_csv('sampled_subjects.csv')
 
-        genotypematrix =  self.read_bed(self.__sample_variants,
-                self.__sample_subjects)
+        genotypematrix = self.read_bed(self._sample_variants,
+                                        self._sample_subjects)
 
         return genotypematrix
 

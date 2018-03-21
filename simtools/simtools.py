@@ -34,7 +34,7 @@ class Simtools(object):
         self.chunk_size = 100
         self.causal_snps = None
 
-    def __causal_SNPs(self, causal, weights=None):
+    def _causal_SNPs(self, causal, weights=None):
         """Define causal SNPs
 
         :causal: number, proportion or list of causal snps
@@ -61,7 +61,7 @@ class Simtools(object):
 
         return causal_snps, weights
 
-    def __chunks(self, l, n):
+    def _chunks(self, l, n):
         """Yield successive n-sized chunks from l."""
         for i in range(0, len(l), n):
             yield l[i:i + n]
@@ -75,7 +75,7 @@ class Simtools(object):
         """
         return (x - np.mean(x, axis=0)) / np.std(x, axis=0)
 
-    def __compute_geffect(self, causal_snps, weights, subjects):
+    def _compute_geffect(self, causal_snps, weights, subjects):
         """TODO: Docstring for _compute_geffect.
 
         :causal_snps: array of causal SNPs
@@ -84,8 +84,8 @@ class Simtools(object):
         :returns: vecor of size n containing the genetic effect
 
         """
-        snp_chunks = self.__chunks(causal_snps, self.chunk_size)
-        effect_chunks = self.__chunks(weights, self.chunk_size)
+        snp_chunks = self._chunks(causal_snps, self.chunk_size)
+        effect_chunks = self._chunks(weights, self.chunk_size)
         t = weights.shape
         n = len(subjects)
 
@@ -120,8 +120,8 @@ class Simtools(object):
             subjects = np.random.choice(self._id_subjects, n)
             self.last_random_subjects = self.subjects[subjects]
 
-        causal_snps, weights = self.__causal_SNPs(causal)
-        geffect = self.__compute_geffect(causal_snps, weights, subjects)
+        causal_snps, weights = self._causal_SNPs(causal)
+        geffect = self._compute_geffect(causal_snps, weights, subjects)
 
         if liability is None:
             pheno = np.sqrt(hera) * geffect + np.sqrt(1 - hera) * np.random.normal(0,
@@ -133,8 +133,8 @@ class Simtools(object):
             ncases = liability[1]
             ncontrols = liability[2]
 
-            cases, controls = self.__liability_model(ncases, ncontrols,
-                                                     threshold, hera, geffect)
+            cases, controls = self._liability_model(ncases, ncontrols,
+                                                    threshold, hera, geffect)
             pheno = np.append(np.repeat(1, len(cases)), np.repeat(0, len(controls)))
             self.liability_cases_controls = np.append(cases, controls)
             self.last_random_subjects = self.subjects[self.liability_cases_controls]
@@ -143,8 +143,8 @@ class Simtools(object):
         else:
             sys.exit('values are missing')
 
-    def __liability_model(self, num_cases, num_controls,
-                          threshold, hera, geffect, max_iter=10000):
+    def _liability_model(self, num_cases, num_controls,
+                         threshold, hera, geffect, max_iter=10000):
         """simulates cases and controls
 
         :num_cases: number of cases
@@ -179,7 +179,7 @@ class Simtools(object):
 
         return container_cases, container_controls
 
-    def __estimateF(self, x, G, lamb, B):
+    def _estimateF(self, x, G, lamb, B):
         """estimator function to estiamte scalar matrices
 
         :x: value to find
@@ -198,7 +198,7 @@ class Simtools(object):
         outcov = C.dot(np.cov(G.T)).dot(C.T) + F.dot(np.identity(t)).dot(F.T)
         return outcov.diagonal() - np.ones(t)
 
-    def __compute_multi_pheno(self, x, G, lamb, B):
+    def _compute_multi_pheno(self, x, G, lamb, B):
         t = lamb.shape[0]
         error = np.zeros((t, G.shape[0]))
         for i in range(t):
@@ -208,7 +208,7 @@ class Simtools(object):
         temp = (B.dot(G.T) + D.dot(error))
         return invert.dot(temp)
 
-    def __multiple_effect_vectors(self, t, num_causal_snps):
+    def _multiple_effect_vectors(self, t, num_causal_snps):
         Beta = np.zeros([self.p, t])
         causal_index = [np.random.randint(low=0, high=self.p, size=k)
                         for k in num_causal_snps]
@@ -240,15 +240,15 @@ class Simtools(object):
 
         t = lamb.shape[0]
 
-        Beta = self.__multiple_effect_vectors(t, num_causal)
+        Beta = self._multiple_effect_vectors(t, num_causal)
         overall_snp_effect = np.sum(Beta, 1)
         causal_snps = np.where(overall_snp_effect > 0)
         Beta = Beta[causal_snps]
         causal_snps = self._plink.bim.index.values[causal_snps[0]]
 
-        G = self.__compute_geffect(causal_snps, Beta, subjects)
+        G = self._compute_geffect(causal_snps, Beta, subjects)
 
-        sol = root(lambda k: self.__estimateF(k, G=G, lamb=lamb, B=B),
+        sol = root(lambda k: self._estimateF(k, G=G, lamb=lamb, B=B),
                    np.array([0.3, 0.3, 0.3]), method='krylov')
-        phenotypes = self.__compute_multi_pheno(sol.x, G, lamb, B)
+        phenotypes = self._compute_multi_pheno(sol.x, G, lamb, B)
         return phenotypes
