@@ -291,22 +291,22 @@ class ReadPlink(object):
 
         :param marker: list of SNPs
         :param subjects: list of subjects
-        :returns: genotypematrix of size subjects*marker
+        :returns: genotype-matrix of size subjects*marker
 
         """
         if marker is None:
-            P_size = self.P
+            p_size = self.P
             marker = self.bim.index.values
         else:
-            P_size = len(marker)
+            p_size = len(marker)
 
         if subjects is None:
-            N_size = self.N
+            n_size = self.N
             subjects = self.fam.index.values
         else:
-            N_size = len(subjects)
+            n_size = len(subjects)
 
-        genotypematrix = np.zeros((N_size, P_size), dtype=np.int8)
+        genotypematrix = np.zeros((n_size, p_size), dtype=np.int8)
 
         j = 0
         for m, g in self.plinkfile.iter_geno_marker(marker):

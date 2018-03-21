@@ -30,9 +30,10 @@ class Simtools(object):
         else:
             self.p = p
 
-        self.genotypematrix = None
         self.chunk_size = 100
         self.causal_snps = None
+        self.liability_cases_controls = None
+        self.last_random_subjects = None
 
     def _causal_SNPs(self, causal, weights=None):
         """Define causal SNPs
@@ -59,6 +60,7 @@ class Simtools(object):
             if len(weights) != len(self.causal_snps):
                 ValueError('Number of weights and number of SNPs do not agree')
 
+        self.causal_snps = causal_snps
         return causal_snps, weights
 
     def _chunks(self, l, n):
@@ -178,8 +180,8 @@ class Simtools(object):
         container_controls = [item for sublist in container_controls for item in sublist]
 
         # remove overhanging samples
-        container_cases = container_cases[0:(num_cases)]
-        container_controls = container_controls[0:(num_controls)]
+        container_cases = container_cases[0:num_cases]
+        container_controls = container_controls[0:num_controls]
 
         return container_cases, container_controls
 
