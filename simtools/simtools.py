@@ -9,9 +9,9 @@ class Simtools(object):
 
     def __init__(self, plink_stem, subjects=None, p=None):
         """
-        :plink_stem: plink stem file path
-        :subjects: iid of subjects to use
-        :p: number of variants to use 
+        :param plink_stem: plink stem file path
+        :param subjects: iid of subjects to use
+        :param p: number of variants to use
         """
         self._plink_stem = plink_stem
         self._plink = ReadPlink(self._plink_stem)
@@ -37,8 +37,8 @@ class Simtools(object):
     def _causal_SNPs(self, causal, weights=None):
         """Define causal SNPs
 
-        :causal: number, proportion or list of causal snps
-        :weights: how to weight causal SNPs (default is 1)
+        :param causal: number, proportion or list of causal snps
+        :param weights: how to weight causal SNPs (default is 1)
         :returns: list of causal SNPs and weights
 
         """
@@ -62,26 +62,30 @@ class Simtools(object):
         return causal_snps, weights
 
     def _chunks(self, l, n):
-        """Yield successive n-sized chunks from l."""
+        """Yield successive n-sized chunks from l.
+        :param l: list of things
+        :param n: number of chunks
+        """
+
         for i in range(0, len(l), n):
             yield l[i:i + n]
 
     def _scale(self, x):
         """scales a matrix or vector.
 
-        :x: numpy matrix
+        :param x: numpy matrix
         :returns: scaled numpy matrix
 
         """
         return (x - np.mean(x, axis=0)) / np.std(x, axis=0)
 
     def _compute_geffect(self, causal_snps, weights, subjects):
-        """TODO: Docstring for _compute_geffect.
+        """Computes genetic effect from a list of causal snps with weights for specific subjects
 
-        :causal_snps: array of causal SNPs
-        :weights: array of weights for the SNPs
-        :subjects: list of subjects
-        :returns: vecor of size n containing the genetic effect
+        :param causal_snps: array of causal SNPs
+        :param weights: array of weights for the SNPs
+        :param subjects: list of subjects
+        :returns: vector of size n containing the genetic effect
 
         """
         snp_chunks = self._chunks(causal_snps, self.chunk_size)
@@ -108,10 +112,10 @@ class Simtools(object):
         """simulates a phenotypes (continues or binary)
         If a liability threshold is used, the method generates a binary phenotype
 
-        :causal: Number of causal SNPs
-        :hera: Heritability
-        :liability: Liability Threshold
-        :n: number of subjects to sample
+        :param causal: Number of causal SNPs
+        :param hera: Heritability
+        :param liability: Liability Threshold
+        :param n: number of subjects to sample
         :returns: Vector of the phenotype
 
         """
@@ -145,11 +149,11 @@ class Simtools(object):
 
     def _liability_model(self, num_cases, num_controls,
                          threshold, hera, geffect, max_iter=10000):
-        """simulates cases and controls
+        """Simulates cases and controls
 
-        :num_cases: number of cases
-        :num_controls: number of controls
-        :threshold: liability threshold
+        :param num_cases: number of cases
+        :param num_controls: number of controls
+        :param threshold: liability threshold
         :returns: subject IDs of cases and controls
 
         """
@@ -180,12 +184,12 @@ class Simtools(object):
         return container_cases, container_controls
 
     def _estimateF(self, x, G, lamb, B):
-        """estimator function to estiamte scalar matrices
+        """Estimator function to estiamte scalar matrices
 
-        :x: value to find
-        :G: genetic effect matrix
-        :lamb: adjacency matrix
-        :B: genetic effect matrix
+        :param x: value to find
+        :param G: genetic effect matrix
+        :param lamb: adjacency matrix
+        :param B: genetic effect matrix
         :returns: variance matrix of phenotypes
 
         """
@@ -199,6 +203,15 @@ class Simtools(object):
         return outcov.diagonal() - np.ones(t)
 
     def _compute_multi_pheno(self, x, G, lamb, B):
+        """Computes multiple phenotype from estimates
+
+        :param x: optimal scaling matrix
+        :param G: genetic effect
+        :param lamb: adjacency matrix
+        :param B: genetic cross effect matrix
+        :return: phenotypes
+
+        """
         t = lamb.shape[0]
         error = np.zeros((t, G.shape[0]))
         for i in range(t):
@@ -209,6 +222,13 @@ class Simtools(object):
         return invert.dot(temp)
 
     def _multiple_effect_vectors(self, t, num_causal_snps):
+        """Generates matrix of effects
+
+        :param t: number of phenotypes
+        :param num_causal_snps: number of causal snps for each phenotype
+        :return: matrix of causal effects
+
+        """
         Beta = np.zeros([self.p, t])
         causal_index = [np.random.randint(low=0, high=self.p, size=k)
                         for k in num_causal_snps]
@@ -221,10 +241,10 @@ class Simtools(object):
     def multi_phenotype(self, lamb, B, num_causal, n=None):
         """Generates multiple inter-related phenotypes
 
-        :lamb: adjacency matrix
-        :B: genetic effect matrix
-        :num_causal: number of causal variants (randomly choosen)
-        :n: number of samples to randomly chose
+        :param lamb: adjacency matrix
+        :param B: genetic effect matrix
+        :param num_causal: number of causal variants (randomly choosen)
+        :param n: number of samples to randomly chose
         :returns: matrix of size n*t
 
         """
