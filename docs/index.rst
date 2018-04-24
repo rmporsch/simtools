@@ -88,6 +88,38 @@ In addition, you can also select specific subjects within the seed population wh
 Single Phenotype Simulation
 ==============================
 
+Single phenotype simulation is done via the following simple model:
+
+.. math::
+
+    y = hX + \varepsilon
+
+
+In which y is the phenotype, :math:`X=G\beta` in which G is the genotype matrix and beta the vector of SNP effects (assumes that X is scaled to :math:`Var(X)=1`) and
+:math:`\varepsilon` represents the error term which is distributed :math:`N(0, \sqrt(1-h))` in which h^2 is the heritability.
+For binary phenotypes a liability threshold model was used.
+
+Use
+-----
+
+.. code-block:: python
+
+    import simtools.simtools as st
+    import numpy as np
+    plink_file = 'plink_stem'
+    sims = st.Simtools(plink_file)
+    heratibiltiy = 0.4
+    proportion_causal_snps = 0.05
+    # continuous
+    pheno = self.sim.simple_phenotype(proportion_causal_snps, heritability, n=n)
+    # binary
+    n_cases = 1000
+    n_controls = 1000
+    parameters = (liability_threshold, n_cases, n_controls)
+    pheno = self.sim.simple_phenotype(proportion_causal_snps, heritability, parameters)
+
+
+
 Multiple Phenotype Simulation
 ================================
 

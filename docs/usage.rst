@@ -72,10 +72,10 @@ To simulate 3 different interrelated phenotypes one can simply::
     lamb[1,0] = 0.1
     lamb[2,0] = 0.1
     # genetc effect matrix
-    B = np.eye(3); B = B * heratibiltiy5
-    
+    b = np.eye(3); b = b * heratibiltiy5
+
     # simulate phenoytpes
-    phenos = sims.multi_phenotype(lamb, B, num_causal_snps)
+    phenos = sims.multi_phenotype(lamb, b, num_causal_snps)
 
 
 tools
