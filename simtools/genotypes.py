@@ -9,7 +9,6 @@ from pyplink import PyPlink
 from tqdm import tqdm
 
 
-
 def simple_genotype_matrix(n, p):
     """Generates a simple matrix containing either 0 or 1 of size nxp
 
@@ -22,7 +21,8 @@ def simple_genotype_matrix(n, p):
     """
     genotypes = np.zeros(shape=(n, p))
     for item in range(0, p):
-        genotypes[:, item] = np.random.binomial(1, np.random.uniform(0.1, 0.5, 1), n)
+        genotypes[:, item] = np.random.binomial(
+            1, np.random.uniform(0.1, 0.5, 1), n)
 
     return genotypes
 
@@ -62,7 +62,11 @@ class ReadVCF(object):
                 gt = records.genotype(sample)['GT']
             except IndexError:
                 print("something went wrong with:")
-                print('sample:', sample, 'variant:', records, '-- set value to missing')
+                print(
+                    'sample:', sample,
+                    'variant:', records,
+                    '-- set value to missing'
+                    )
                 gt = '.'
             if gt == '.':
                 gt = 0

@@ -35,7 +35,6 @@ def qqplot(dat, grouping='pheno', pvalue='pvalue'):
             temp = temp.apply(lambda x: -1*np.log(x))
             plt.plot(temp.null, temp.pvalue, '.', label=str(name))
             plt.plot(temp.null, temp.null)
-            plt.
         plt.legend(loc='upper left')
 
     plt.xlabel('Expected')

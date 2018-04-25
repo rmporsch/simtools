@@ -35,6 +35,37 @@ class Simtools(object):
         self.liability_cases_controls = None
         self.last_random_subjects = None
 
+    def read_bed(self, marker=None, subjects=None):
+        """read bed file
+
+        :param marker: list of SNPs
+        :param subjects: list of subjects
+        :returns: genotype-matrix of size subjects*marker
+
+        """
+        if marker is None:
+            p_size = self.P
+            marker = self.bim.index.values
+        else:
+            p_size = len(marker)
+
+        if subjects is None:
+            n_size = self.N
+            subjects = self.fam.index.values
+        else:
+            n_size = len(subjects)
+
+        genotypematrix = np.zeros((n_size, p_size), dtype=np.int8)
+
+        j = 0
+        for m, g in self.plinkfile.iter_geno_marker(marker):
+            genotypematrix[:,j] = g[subjects]
+            j += 1
+
+        genotypematrix[genotypematrix < 0] = 0
+
+        return genotypematrix
+
     def _causal_SNPs(self, causal, weights=None):
         """Define causal SNPs
 
