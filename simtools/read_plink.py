@@ -8,6 +8,7 @@ class ReadPlink(object):
 
     def __init__(self, plinkstem):
         """Plink init functions."""
+        # super(ReadPlink).__init__()
         self._plinkstem = plinkstem
         self._bim_path = os.path.basename(self._plinkstem)+'.bim'
         self._bed_path = os.path.basename(self._plinkstem)+'.bed'
@@ -18,7 +19,7 @@ class ReadPlink(object):
         self.bim = self.plinkfile.get_bim()
         self.N = self.fam.shape[0]
         self.P = self.bim.shape[0]
-        self.subject = self.fam['IID'].values
+        self.subject = self.fam['iid'].values
         self.variants = self.bim.index.values
 
     def get_gentoypematrix(self, marker=None, subjects=None):
@@ -37,9 +38,10 @@ class ReadPlink(object):
 
         if subjects is None:
             n_size = self.N
-            subjects = self.subject
+            subjects = self.fam.index.values
         else:
             n_size = len(subjects)
+            subjects = self.fam[self.fam.iid.isin(subjects)].index.values
 
         genotypematrix = np.zeros((n_size, p_size), dtype=np.int8)
 

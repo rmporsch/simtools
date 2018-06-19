@@ -6,28 +6,36 @@ or plink file.
 import numpy as np
 import pandas as pd
 import re
-from simtools.read_vcf import ReadVCF
-from simtools.read_plink import ReadPlink
+from read_vcf import ReadVCF
+from read_plink import ReadPlink
 from scipy.optimize import root
+import os
 
 
-class Simtools(ReadPlink, ReadVCF):
+class Simtools(object):
     """docstring for Simtools."""
 
-    def __init__(self, genotype_path):
+    def __init__(self, genotype_path, chunk_size):
         """Init for Simtools."""
-        # super(Simtools).__init__()
+        assert os.path.isfile(genotype_path)
         self.genotype_path = genotype_path
         assert isinstance(genotype_path, str)
         self.type = None
         if bool(re.search('vcf', genotype_path)):
             print('Assume file in vcf format')
             self.type = 'vcf'
-            ReadVCF.__init__(self, genotype_path)
+            self._reader = ReadVCF(genotype_path)
+            self.get_genotypematrix = self._reader.get_genotypematrix
         else:
             print('Assume file in plink format')
             self.type = 'plink'
-            ReadPlink.__init__(self, genotype_path)
+            self._reader = ReadPlink(genotype_path)
+            self.get_genotypematrix = self._reader.get_genotypematrix
+        self.subject = self._reader.subject
+        self.variants = self._reader.variants
+        self.N = self._reader.N
+        self.P = self._reader.P
+        self.chunk_size = chunk_size
 
     def sample_genotypematrix(self, n, p):
         """Sample from genotype matrix.
@@ -63,18 +71,18 @@ class Simtools(ReadPlink, ReadVCF):
         causal_snps = []
         if isinstance(causal, int):
             causal_snps = np.random.choice(range(self.P), causal)
-            causal_snps = self._plink.bim.index.values[causal_snps]
+            causal_snps = self.variants[causal_snps]
         if isinstance(causal, list):
-            causal_snps = self._plink.bim.index.values[np.array(causal)]
+            causal_snps = self.variants[np.array(causal)]
         if isinstance(causal, float):
             n_causal = int(np.floor(self.P * causal))
             causal_snps = np.random.choice(range(self.P), n_causal)
-            causal_snps = self._plink.bim.index.values[causal_snps]
+            causal_snps = self.variants[causal_snps]
 
         if weights is None:
             weights = np.ones(len(causal_snps))
         else:
-            if len(weights) != len(self.causal_snps):
+            if len(weights) != len(causal_snps):
                 ValueError('Number of weights and number of SNPs do not agree')
 
         self.causal_snps = causal_snps
@@ -82,6 +90,7 @@ class Simtools(ReadPlink, ReadVCF):
 
     def _chunks(self, l, n):
         """Yield successive n-sized chunks from l.
+
         :param l: list of things
         :param n: number of chunks
         """
@@ -141,12 +150,12 @@ class Simtools(ReadPlink, ReadVCF):
         """
         assert isinstance(hera, float)
         assert hera <= 1.0
+        assert n <= self.N
         subjects = np.arange(0, self.N)
         subject_names = self.subject
         if n is not None:
-            assert n <= self.N
             subjects = np.random.choice(np.arange(0, self.N), n)
-            subject_names = self.subject[subjects]
+            subject_names = self.subjects[subjects]
 
         causal_snps, weights = self._causal_SNPs(causal)
         geffect = self._compute_geffect(causal_snps, weights, subjects)
@@ -193,8 +202,8 @@ class Simtools(ReadPlink, ReadVCF):
             if len(container_controls) < num_controls:
                 container_controls.append(np.argwhere(pheno < threshold))
 
-            if (len(container_cases) >= num_cases and
-                    len(container_controls) >= num_controls):
+            if (len(container_cases) >= num_cases) and (
+                len(container_controls) >= num_controls):
                 break
 
         # unlist
@@ -253,8 +262,8 @@ class Simtools(ReadPlink, ReadVCF):
         :return: matrix of causal effects
 
         """
-        Beta = np.zeros([self.P, t])
-        causal_index = [np.random.randint(low=0, high=self.P, size=k)
+        Beta = np.zeros([self.p, t])
+        causal_index = [np.random.randint(low=0, high=self.p, size=k)
                         for k in num_causal_snps]
         # simualte effect sizes for each variant
         for i in range(Beta.shape[1]):
@@ -280,8 +289,8 @@ class Simtools(ReadPlink, ReadVCF):
         subjects = np.arange(0, self.N)
 
         if n is not None:
-            subjects = np.random.choice(subjects, n)
-            subject_names = self.subject[subjects]
+            subjects = np.random.choice(self.subjects, n)
+            subject_names = self.subjects[subjects]
 
         t = lamb.shape[0]
 

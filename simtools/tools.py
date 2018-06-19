@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import scipy
 from simtools.genotypes import ReadPlink
+from distutils.spawn import find_executable
 
 
 def qqplot(dat, grouping='pheno', pvalue='pvalue'):
@@ -148,7 +149,9 @@ class Plink(object):
         self._plink_stem = plink_stem
 
         if plink_path == 'auto':
-            self._bin_plink = '/usr/bin/plink'
+            self._bin_plink = find_executable('plink')
+            if self._bin_plink is None:
+                raise ValueError('Could not find plink executable')
         else:
             self._bin_plink = plink_path
 

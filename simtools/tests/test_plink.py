@@ -1,23 +1,22 @@
 import unittest
-import os
-from simtools import genotypes as gp
+from simtools.read_plink import ReadPlink
 
-DATA = os.path.join(os.path.dirname(__file__), 'data')
 
 class TestPlink(unittest.TestCase):
 
     def setUp(self):
-        self.n = 1000
-        self.p = 100
-        self.ff = "/home/robert/Documents/projects/risk_prediction/data/subset_10k"
-        self.testread = gp.ReadPlink(self.ff)
+        self.ff = "data/1kg_phase1_chr22"
+        self.testread = ReadPlink(self.ff)
 
-    def test_sampling(self):
-        temp = self.testread.sample(self.n, self.p)
-        self.assertEqual(temp.shape[0], self.n, 'incorrect row numbers')
-        self.assertEqual(temp.shape[1], self.p, 'incorrect col numbers')
+    def test_genotypematrix(self):
+        n = 100
+        p = 1000
+        temp = self.testread.get_gentoypematrix(
+            self.testread.variants[0:p],
+            self.testread.subject[0:n])
+        self.assertEqual(temp.shape[0], n, 'incorrect row numbers')
+        self.assertEqual(temp.shape[1], p, 'incorrect col numbers')
 
 
 if __name__ == '__main__':
     unittest.main()
-

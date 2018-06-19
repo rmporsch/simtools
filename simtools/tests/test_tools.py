@@ -1,5 +1,5 @@
 import unittest
-from simtools import tools
+from simtools.simtools import tools
 from simtools import simtools as si
 import numpy as np
 
@@ -26,7 +26,7 @@ class TestTools(unittest.TestCase):
                 subjects=self.sim.last_random_subjects)
         # format prs ready
         prs_computation = results[['SNP', 'A1', 'BETA']]
-        prs = self.plink.prs(prs_computation, 
+        prs = self.plink.prs(prs_computation,
                 subjects=self.sim.last_random_subjects)
         self.assertEqual(prs.shape[0], 100)
 
@@ -42,6 +42,3 @@ class TestTools(unittest.TestCase):
                 subjects=self.sim.last_random_subjects)
 
         tools.qqplot(results.P.values)
-
-        
-

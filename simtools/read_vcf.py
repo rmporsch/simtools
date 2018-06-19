@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import re
-import os
 import vcf
 
 
@@ -13,10 +12,12 @@ class ReadVCF(object):
 
         :param vcffile: path to the vcf file
         """
+        # super(ReadVCF).__init__()
         self.subject = None
         self.variants = []
         self.P = None
         self.N = None
+        self.fam = None
         self._vcf_file = vcffile
         self._get_samples()
         self._get_allele_freq()
@@ -25,6 +26,7 @@ class ReadVCF(object):
     def _get_samples(self):
         reader = vcf.Reader(filename=self._vcf_file)
         self.subject = reader.samples
+        self.fam = pd.DataFrame({'iid': self.subject})
 
     def _get_genotypes(self, samples, records, switch):
         """Get the genotypes from records.
@@ -60,7 +62,7 @@ class ReadVCF(object):
         """Criteria to filter out record.
 
         :param record: record objects
-        :return: two values *bool*; process (pass filter), switch (switch major/minor allele)
+        :return: process (pass filter), switch (switch major/minor allele)
         """
         process = True
         switch = False
@@ -74,7 +76,7 @@ class ReadVCF(object):
         :param samples: list of samples
         :return: samples in vcf file
         """
-        check = [k not in self._samples for k in samples]
+        check = [k not in self.subject for k in samples]
         num_not_in_vcf = np.sum(check)
         exclude_file_path = '.excluded.subjects'
         if num_not_in_vcf > 0:
@@ -84,7 +86,9 @@ class ReadVCF(object):
             print(
                 num_not_in_vcf,
                 'not in file and were removed; see %s' % exclude_file_path)
-        return samples[~np.array(check)]
+            return samples[~np.array(check)]
+        else:
+            return samples
 
     def get_gentoypematrix(self, variants=None, subjects=None):
         """Load genotype matrix.
