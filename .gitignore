@@ -105,3 +105,6 @@ ENV/
 .temp
 
 # data
+data/*
+*.txt
+.vcf_variants.bim
