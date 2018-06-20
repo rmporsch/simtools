@@ -19,8 +19,9 @@ class ReadPlink(object):
         self.bim = self.plinkfile.get_bim()
         self.N = self.fam.shape[0]
         self.P = self.bim.shape[0]
-        self.subject = self.fam['iid'].values
+        self.subjects = self.fam['iid'].values
         self.variants = self.bim.index.values
+        assert len(self.subjects) == self.N
 
     def get_gentoypematrix(self, marker=None, subjects=None):
         """Read bed file.
@@ -40,8 +41,9 @@ class ReadPlink(object):
             n_size = self.N
             subjects = self.fam.index.values
         else:
+            subjects = np.arange(len(subjects))[np.isin(subjects,
+                                                        self.subjects)]
             n_size = len(subjects)
-            subjects = self.fam[self.fam.iid.isin(subjects)].index.values
 
         genotypematrix = np.zeros((n_size, p_size), dtype=np.int8)
 

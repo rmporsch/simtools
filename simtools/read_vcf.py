@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import re
 import vcf
+import os
 
 
 class ReadVCF(object):
@@ -12,21 +13,20 @@ class ReadVCF(object):
 
         :param vcffile: path to the vcf file
         """
-        # super(ReadVCF).__init__()
-        self.subject = None
-        self.variants = []
+        self.subjects = None
+        self.variants = np.array([])
         self.P = None
         self.N = None
         self.fam = None
         self._vcf_file = vcffile
         self._get_samples()
         self._get_allele_freq()
-        self.N = len(self.subject)
+        self.N = len(self.subjects)
 
     def _get_samples(self):
         reader = vcf.Reader(filename=self._vcf_file)
-        self.subject = reader.samples
-        self.fam = pd.DataFrame({'iid': self.subject})
+        self.subjects = np.array(reader.samples)
+        self.fam = pd.DataFrame({'iid': self.subjects})
 
     def _get_genotypes(self, samples, records, switch):
         """Get the genotypes from records.
@@ -76,7 +76,8 @@ class ReadVCF(object):
         :param samples: list of samples
         :return: samples in vcf file
         """
-        check = [k not in self.subject for k in samples]
+        samples = np.array(samples)
+        check = np.isin(samples, self.subjects, invert=True)
         num_not_in_vcf = np.sum(check)
         exclude_file_path = '.excluded.subjects'
         if num_not_in_vcf > 0:
@@ -86,7 +87,9 @@ class ReadVCF(object):
             print(
                 num_not_in_vcf,
                 'not in file and were removed; see %s' % exclude_file_path)
-            return samples[~np.array(check)]
+            return samples[~check]
+        elif num_not_in_vcf >= len(samples):
+            raise RuntimeError('No subjects is present in vcf file')
         else:
             return samples
 
@@ -99,18 +102,18 @@ class ReadVCF(object):
         """
         if variants is None:
             p_size = self.P
-            variants = self.variants
+            variants = np.array(self.variants)
         else:
-            assert isinstance(variants, list)
-            assert isinstance(variants[0], str)
             p_size = len(variants)
+            variants = np.array(variants)
 
         if subjects is None:
             n_size = self.N
-            subjects = self.subject
+            subjects = self.subjects
         else:
-            assert isinstance(subjects, list)
             n_size = len(subjects)
+            if not isinstance(subjects[0], str):
+                subjects = self.subjects[subjects]
 
         subjects = self._check_samples(subjects)
         variants = pd.DataFrame([k.split(':') for k in variants])
@@ -137,13 +140,24 @@ class ReadVCF(object):
 
         :param index_file: location of the index file
         """
-        print("Scanning vcf file and writing stats to %s" % output_path)
-        vcf_reader = vcf.Reader(filename=self._vcf_file)
         counter = 0
-        with open(output_path, 'w') as f:
-            for record in vcf_reader:
-                f.write('%s %i %s %f\n' %
-                        (record.CHROM, record.POS, record.ID, record.aaf[0]))
-                self.variants.append(str(record.CHROM)+':'+str(record.POS))
-                counter += 1
-        self.P = counter
+        if os.path.isfile(output_path):
+            with open(output_path, 'r') as f:
+                for line in f:
+                    line = line.split()
+                    self.variants = np.append(self.variants,
+                                              (str(line[0]+':'+str(line[1]))))
+
+                    counter += 1
+            self.P = counter
+        else:
+            print("Scanning vcf file and writing stats to %s" % output_path)
+            vcf_reader = vcf.Reader(filename=self._vcf_file)
+            with open(output_path, 'w') as f:
+                for record in vcf_reader:
+                    f.write('%s %i %s %f\n' %
+                            (record.CHROM, record.POS, record.ID, record.aaf[0]))
+                    self.variants = np.append(self.variants,
+                                              str(record.CHROM)+':'+str(record.POS))
+                    counter += 1
+            self.P = counter

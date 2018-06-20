@@ -6,8 +6,8 @@ or plink file.
 import numpy as np
 import pandas as pd
 import re
-from read_vcf import ReadVCF
-from read_plink import ReadPlink
+from simtools.read_vcf import ReadVCF
+from simtools.read_plink import ReadPlink
 from scipy.optimize import root
 import os
 
@@ -15,27 +15,28 @@ import os
 class Simtools(object):
     """docstring for Simtools."""
 
-    def __init__(self, genotype_path, chunk_size):
+    def __init__(self, genotype_path, chunk_size=5000):
         """Init for Simtools."""
-        assert os.path.isfile(genotype_path)
         self.genotype_path = genotype_path
         assert isinstance(genotype_path, str)
         self.type = None
         if bool(re.search('vcf', genotype_path)):
             print('Assume file in vcf format')
             self.type = 'vcf'
+            assert os.path.isfile(genotype_path)
             self._reader = ReadVCF(genotype_path)
-            self.get_genotypematrix = self._reader.get_genotypematrix
         else:
             print('Assume file in plink format')
             self.type = 'plink'
             self._reader = ReadPlink(genotype_path)
-            self.get_genotypematrix = self._reader.get_genotypematrix
-        self.subject = self._reader.subject
+        self.subjects = self._reader.subjects
         self.variants = self._reader.variants
         self.N = self._reader.N
         self.P = self._reader.P
         self.chunk_size = chunk_size
+
+    def get_gentoypematrix(self, marker=None, subjects=None):
+        return self._reader.get_gentoypematrix(marker, subjects)
 
     def sample_genotypematrix(self, n, p):
         """Sample from genotype matrix.
@@ -52,7 +53,7 @@ class Simtools(object):
         """
         assert isinstance(n, int)
         assert isinstance(p, int)
-        self._sample_subjects = np.random.choice(self.subject, n, replace=True)
+        self._sample_subjects = np.random.choice(self.subjects, n, replace=True)
         self._sample_variants = np.random.choice(self.variants, p)
 
         genotypematrix = self.get_gentoypematrix(
@@ -68,7 +69,6 @@ class Simtools(object):
         :returns: list of causal SNPs and weights
 
         """
-        causal_snps = []
         if isinstance(causal, int):
             causal_snps = np.random.choice(range(self.P), causal)
             causal_snps = self.variants[causal_snps]
@@ -76,7 +76,7 @@ class Simtools(object):
             causal_snps = self.variants[np.array(causal)]
         if isinstance(causal, float):
             n_causal = int(np.floor(self.P * causal))
-            causal_snps = np.random.choice(range(self.P), n_causal)
+            causal_snps = np.random.randint(0, self.P, n_causal)
             causal_snps = self.variants[causal_snps]
 
         if weights is None:
@@ -106,6 +106,13 @@ class Simtools(object):
         """
         return (x - np.mean(x, axis=0)) / np.std(x, axis=0)
 
+    def _check_samples(self, subjects):
+        check = np.isin(subjects, self.subjects, invert=True)
+        num_not_in = np.sum(check)
+        if num_not_in > 1:
+            print(num_not_in, 'subjects were removed')
+        return subjects[~check]
+
     def _compute_geffect(self, causal_snps, weights, subjects):
         """Compute the genetic effect.
 
@@ -120,6 +127,7 @@ class Simtools(object):
         snp_chunks = self._chunks(causal_snps, self.chunk_size)
         effect_chunks = self._chunks(weights, self.chunk_size)
         t = weights.shape
+        subjects = self._check_samples(subjects)
         n = len(subjects)
 
         # check number of phenotypes
@@ -133,6 +141,9 @@ class Simtools(object):
         for snps, effect in zip(snp_chunks, effect_chunks):
             temp_matrix = self.get_gentoypematrix(
                 marker=snps, subjects=subjects)
+            where_nan = np.isnan(temp_matrix)
+            temp_matrix[where_nan] = 0
+            assert np.sum(np.isnan(effect)) == 0
             geffect += np.dot(temp_matrix, effect)
 
         return self._scale(geffect)
@@ -150,20 +161,23 @@ class Simtools(object):
         """
         assert isinstance(hera, float)
         assert hera <= 1.0
-        assert n <= self.N
         subjects = np.arange(0, self.N)
-        subject_names = self.subject
+        subject_names = self.subjects
         if n is not None:
-            subjects = np.random.choice(np.arange(0, self.N), n)
-            subject_names = self.subjects[subjects]
+            assert n <= self.N
+            subjects = np.random.randint(0, self.N, n)
+            subject_names = self.subjects[np.array(subjects)]
 
         causal_snps, weights = self._causal_SNPs(causal)
-        geffect = self._compute_geffect(causal_snps, weights, subjects)
+        geffect = self._compute_geffect(causal_snps, weights,
+                                        subject_names)
 
         if liability is None:
             pheno = np.sqrt(hera) * geffect + np.sqrt(1 - hera) *\
                  np.random.normal(0, np.sqrt(1), len(subjects))
-            return pd.DataFrame({'IID': subject_names, 'Pheno': pheno})
+            out = pd.DataFrame({'IID': subject_names, 'Pheno': pheno})
+            out = out.set_index('IID')
+            return out
 
         else:
             assert isinstance(liability, tuple)
@@ -177,7 +191,9 @@ class Simtools(object):
                 np.repeat(1, len(cases)), np.repeat(0, len(controls)))
             id_cases_controls = np.append(cases, controls)
             subject_names = self.subjects[id_cases_controls]
-            return pd.DataFrame({'IID': subject_names, 'Pheno': pheno})
+            out = pd.DataFrame({'IID': subject_names, 'Pheno': pheno})
+            out = out.set_index('IID')
+            return out
 
     def _liability_model(self, num_cases, num_controls,
                          threshold, hera, geffect, max_iter=10000):
@@ -195,7 +211,7 @@ class Simtools(object):
         for item in range(max_iter):
             pheno = np.sqrt(hera) *\
                  geffect + np.sqrt(1 - hera) *\
-                 np.random.normal(0, np.sqrt(1), self.n)
+                 np.random.normal(0, np.sqrt(1), self.N)
             if len(container_cases) < num_cases:
                 container_cases.append(np.argwhere(pheno >= threshold))
 
@@ -262,8 +278,8 @@ class Simtools(object):
         :return: matrix of causal effects
 
         """
-        Beta = np.zeros([self.p, t])
-        causal_index = [np.random.randint(low=0, high=self.p, size=k)
+        Beta = np.zeros([self.P, t])
+        causal_index = [np.random.randint(low=0, high=self.P, size=k)
                         for k in num_causal_snps]
         # simualte effect sizes for each variant
         for i in range(Beta.shape[1]):
@@ -287,9 +303,10 @@ class Simtools(object):
                     genetic effect is not the same""")
 
         subjects = np.arange(0, self.N)
+        subject_names = self.subjects
 
         if n is not None:
-            subjects = np.random.choice(self.subjects, n)
+            subjects = np.random.randint(0, self.N, n)
             subject_names = self.subjects[subjects]
 
         t = lamb.shape[0]
@@ -300,11 +317,15 @@ class Simtools(object):
         Beta = Beta[causal_snps]
         causal_snps = self.variants[causal_snps[0]]
 
-        G = self._compute_geffect(causal_snps, Beta, subjects)
+        G = self._compute_geffect(causal_snps, Beta, subject_names)
 
         sol = root(lambda k: self._estimateF(k, G=G, lamb=lamb, B=B),
                    np.array([0.3, 0.3, 0.3]), method='krylov')
         phenotypes = self._compute_multi_pheno(sol.x, G, lamb, B)
+        print(phenotypes.shape)
         out = pd.DataFrame({'IID': subject_names})
-        out = pd.concat([out, pd.DataFrame(phenotypes)])
+        out = pd.concat([out, pd.DataFrame(np.transpose(phenotypes))],
+                        axis=1)
+        out = out.set_index('IID')
+        print(out.shape)
         return out

@@ -7,14 +7,15 @@ import pandas as pd
 
 class TestVCF(unittest.TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(self):
         self.n = 200
         self.p = 100
         self.f = 'data/example.vcf.gz'
         self.testread = ReadVCF('data/example.vcf.gz')
 
     def test_get_samples(self):
-        self.assertGreater(len(self.testread.subject), 1)
+        self.assertGreater(len(self.testread.subjects), 1)
 
     def test_get_genotypes(self):
         samples = ['HG00096', 'HG00097', 'HG00099']
@@ -35,6 +36,6 @@ class TestVCF(unittest.TestCase):
         p = 200
         temp = self.testread.get_gentoypematrix(
             self.testread.variants[0:p],
-            self.testread.subject[0:n])
+            self.testread.subjects[0:n])
         self.assertEqual(temp.shape[0], n, 'incorrect row numbers')
         self.assertEqual(temp.shape[1], p, 'incorrect col numbers')

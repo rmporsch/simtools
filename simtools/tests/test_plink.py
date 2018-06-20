@@ -13,7 +13,7 @@ class TestPlink(unittest.TestCase):
         p = 1000
         temp = self.testread.get_gentoypematrix(
             self.testread.variants[0:p],
-            self.testread.subject[0:n])
+            self.testread.subjects[0:n])
         self.assertEqual(temp.shape[0], n, 'incorrect row numbers')
         self.assertEqual(temp.shape[1], p, 'incorrect col numbers')
 

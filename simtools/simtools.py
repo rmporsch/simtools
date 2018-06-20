@@ -149,7 +149,7 @@ class Simtools(ReadPlink, ReadVCF):
             subject_names = self.subject[subjects]
 
         causal_snps, weights = self._causal_SNPs(causal)
-        geffect = self._compute_geffect(causal_snps, weights, subjects)
+        geffect = self._compute_geffect(causal_snps, weights, subject_names)
 
         if liability is None:
             pheno = np.sqrt(hera) * geffect + np.sqrt(1 - hera) *\

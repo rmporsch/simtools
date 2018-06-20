@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scipy
-from simtools.genotypes import ReadPlink
+from simtools.read_plink import ReadPlink
 from distutils.spawn import find_executable
 
 
